@@ -7,8 +7,13 @@
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 
+// IMPROVE: Determine this from some static ESP data, if
+//          such a thing exists, and print it out.
+#define DEVICE_ID 1
+
 #define NEO_PIN    2
 #define NUM_LIGHTS 2
+#define BYTES_PER_LIGHT 4
 Adafruit_NeoPixel display = Adafruit_NeoPixel(NUM_LIGHTS, NEO_PIN, NEO_GRBW + NEO_KHZ800);
 
 #define WIFI_SSID     "Hanshotfirst (2G)"
@@ -21,12 +26,19 @@ Adafruit_NeoPixel display = Adafruit_NeoPixel(NUM_LIGHTS, NEO_PIN, NEO_GRBW + NE
 #define UDP_GROUP_3  71
 IPAddress multicastGroup(UDP_GROUP_0, UDP_GROUP_1, UDP_GROUP_2, UDP_GROUP_3);
 
-#define MAX_PACKET_LENGTH 255
+#define MAX_PACKET_LENGTH 256
 char packetBuffer[MAX_PACKET_LENGTH];
 
-WiFiUDP Udp;
+WiFiUDP g_udp;
+bool g_holding;
+
+inline void blankLight(int light) {
+    display.setPixelColor(light, 0, 0, 0, 0);
+}
 
 void setup() {
+    g_holding = false;
+
     initDisplay();
     connectToWifi();
 }
@@ -34,7 +46,7 @@ void setup() {
 void initDisplay() {
     display.begin();
     for (int i = 0; i < NUM_LIGHTS; i++) {
-        display.setPixelColor(i, 0, 0, 0, 0);
+        blankLight(i);
     }
 
     display.show();
@@ -53,27 +65,42 @@ void connectToWifi() {
         delay(250);
 
         for (int i = 0; i < NUM_LIGHTS; i++) {
-            display.setPixelColor(i, 0, 0, 0, 0);
+            blankLight(i);
             display.show();
         }
     }
 
-    Udp.beginMulticast(WiFi.localIP(), multicastGroup, UDP_PORT);
+    g_udp.beginMulticast(WiFi.localIP(), multicastGroup, UDP_PORT);
 }
 
 void loop() {
-    int incomingSize = Udp.parsePacket();
+    processPacket();
+}
+
+inline void processPacket() {
+    int incomingSize = g_udp.parsePacket();
 
     if (incomingSize > 0) {
-        int actualSize = Udp.read(packetBuffer, MAX_PACKET_LENGTH);
+        int actualSize = g_udp.read(packetBuffer, MAX_PACKET_LENGTH);
 
-        if (actualSize > 0) {
-            packetBuffer[actualSize] = 0;
+        int numSentLights = packetBuffer[0];
+        int processLights = NUM_LIGHTS < numSentLights ? NUM_LIGHTS: numSentLights;
+
+        for (int i = 0; i < processLights; i++) {
+            int baseAddress = (i + 1) * BYTES_PER_LIGHT;
+            display.setPixelColor(
+                i,
+                packetBuffer[baseAddress],
+                packetBuffer[baseAddress + 1],
+                packetBuffer[baseAddress + 2],
+                packetBuffer[baseAddress + 3]
+            );
         }
 
-        for (int i = 0; i < NUM_LIGHTS; i++) {
-            display.setPixelColor(i, packetBuffer[0], packetBuffer[1], packetBuffer[2], packetBuffer[3]);
-            display.show();
+        for (int i = processLights; i < NUM_LIGHTS; i++) {
+            blankLight(i);
         }
+
+        display.show();
     }
 }
