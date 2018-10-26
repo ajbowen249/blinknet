@@ -13,6 +13,7 @@ sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
 
 # Improve: These could be added to the UI, but it's not currently worth it.
 num_lights = 2
+hold_id = 1
 
 class App:
     def __init__(self):
@@ -23,6 +24,10 @@ class App:
         self.green_slider = tk.Scale(self.root, from_=0, to=255, orient='horizontal', command=self.broadcast_values)
         self.blue_slider  = tk.Scale(self.root, from_=0, to=255, orient='horizontal', command=self.broadcast_values)
         self.white_slider = tk.Scale(self.root, from_=0, to=255, orient='horizontal', command=self.broadcast_values)
+
+        self.begin_hold_button = tk.Button(self.root, text="Hold Current Color", command=self.begin_hold)
+        self.clear_hold_button = tk.Button(self.root, text="Clear Hold", command=self.clear_hold)
+        self.global_clear_hold_button = tk.Button(self.root, text="Global Clear Hold", command=self.global_clear_hold)
 
         w = tk.Label(self.root, text="Global Red")
         w.pack()
@@ -40,13 +45,18 @@ class App:
         w.pack()
         self.white_slider.pack()
 
+        self.begin_hold_button.pack()
+        self.clear_hold_button.pack()
+        self.global_clear_hold_button.pack()
+
         self.root.mainloop()
 
-    def broadcast_values(self, event):
+
+    def get_color_packet(self, opcode=0, id=0):
         packet = [
             num_lights,
-            0, # broadcast
-            0, # not needed
+            opcode,
+            id,
             0, # reserved
         ]
 
@@ -58,6 +68,30 @@ class App:
                 self.white_slider.get()
             ]
 
-        sock.sendto(array.array('B', packet).tostring(), multicast_group)
+        return packet
+
+
+    def broadcast_values(self, event):
+        self.send_packet(self.get_color_packet())
+
+
+    def begin_hold(self):
+        self.send_packet(self.get_color_packet(1, hold_id))
+
+
+    def clear_hold(self):
+        self.send_packet(self.get_color_packet(2, hold_id))
+
+
+    def global_clear_hold(self):
+        self.send_packet(self.get_color_packet(3))
+
+
+    def send_packet(self, packet):
+        sock.sendto(
+            array.array('B', packet).tostring(),
+            multicast_group
+        )
+
 
 app=App()

@@ -14,6 +14,7 @@ The first byte is the number of lights in the packet, meaning the total packet s
 - **0x00**: Broadcast colors. This is the "normal" mode of operation, and is used when the control unit is broadcasting color data to all devices on the network. It does not set a device ID.
 - **0x01**: Individual device colors. This addresses a specific device (via the device ID byte), and only that device should follow the order. Once consumed, the device should ignore broadcast colors until this state is cleared. This should be used sparingly, as the nature of the network means that all device will receive this packet.
 - **0x02**: Clear device color. This packet clears the individual color state to allow the device to listen to broadcasts again.
+- **0x03**: Global clear hold. Same as **0x02**, but all currently-holding devices should listen.
 
 ## Clients
 There is currently one client implementation. It is for the Arduino-bootloaded ESP8266-01 WiFi transceiver module, and it drives an ws2812 RGBW LED chain.

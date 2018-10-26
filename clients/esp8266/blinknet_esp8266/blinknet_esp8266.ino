@@ -7,33 +7,25 @@
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 
-// IMPROVE: Determine this from some static ESP data, if
-//          such a thing exists, and print it out.
-#define DEVICE_ID 1
+#include "config.h"
 
-#define NEO_PIN    2
-#define NUM_LIGHTS 2
-#define BYTES_PER_LIGHT 4
-Adafruit_NeoPixel display = Adafruit_NeoPixel(NUM_LIGHTS, NEO_PIN, NEO_GRBW + NEO_KHZ800);
+Adafruit_NeoPixel g_display = Adafruit_NeoPixel(NUM_LIGHTS, NEO_PIN, NEO_GRBW + NEO_KHZ800);
 
-#define WIFI_SSID     "Hanshotfirst (2G)"
-#define WIFI_PASSWORD "12Parsecs"
-
-#define UDP_PORT 4210
-#define UDP_GROUP_0 224
-#define UDP_GROUP_1   3
-#define UDP_GROUP_2  29
-#define UDP_GROUP_3  71
-IPAddress multicastGroup(UDP_GROUP_0, UDP_GROUP_1, UDP_GROUP_2, UDP_GROUP_3);
-
-#define MAX_PACKET_LENGTH 256
-char packetBuffer[MAX_PACKET_LENGTH];
+IPAddress g_multicastGroup(UDP_GROUP_0, UDP_GROUP_1, UDP_GROUP_2, UDP_GROUP_3);
+byte g_packetBuffer[MAX_PACKET_LENGTH];
 
 WiFiUDP g_udp;
 bool g_holding;
 
+enum class Opcode : byte {
+    Broadcast = 0x00,
+    Hold = 0x01,
+    ClearHold = 0x02,
+    GlobalClearHold = 0x03,
+};
+
 inline void blankLight(int light) {
-    display.setPixelColor(light, 0, 0, 0, 0);
+    g_display.setPixelColor(light, 0, 0, 0, 0);
 }
 
 void setup() {
@@ -44,12 +36,12 @@ void setup() {
 }
 
 void initDisplay() {
-    display.begin();
+    g_display.begin();
     for (int i = 0; i < NUM_LIGHTS; i++) {
         blankLight(i);
     }
 
-    display.show();
+    g_display.show();
 }
 
 void connectToWifi() {
@@ -58,19 +50,19 @@ void connectToWifi() {
         delay(250);
 
         for (int i = 0; i < NUM_LIGHTS; i++) {
-            display.setPixelColor(i, 255, 0, 0, 0);
-            display.show();
+            g_display.setPixelColor(i, 255, 0, 0, 0);
+            g_display.show();
         }
 
         delay(250);
 
         for (int i = 0; i < NUM_LIGHTS; i++) {
             blankLight(i);
-            display.show();
+            g_display.show();
         }
     }
 
-    g_udp.beginMulticast(WiFi.localIP(), multicastGroup, UDP_PORT);
+    g_udp.beginMulticast(WiFi.localIP(), g_multicastGroup, UDP_PORT);
 }
 
 void loop() {
@@ -81,19 +73,40 @@ inline void processPacket() {
     int incomingSize = g_udp.parsePacket();
 
     if (incomingSize > 0) {
-        int actualSize = g_udp.read(packetBuffer, MAX_PACKET_LENGTH);
+        int actualSize = g_udp.read(g_packetBuffer, MAX_PACKET_LENGTH);
 
-        int numSentLights = packetBuffer[0];
+        int numSentLights = g_packetBuffer[0];
+        Opcode opcode = (Opcode)g_packetBuffer[1];
+
+        if (opcode != Opcode::Broadcast) {
+            byte id = g_packetBuffer[2];
+            if (
+                opcode == Opcode::GlobalClearHold ||
+                (id == DEVICE_ID && opcode == Opcode::ClearHold)
+            ) {
+                g_holding = false;
+                return;
+            }
+
+            if (id != DEVICE_ID) {
+                return;
+            }
+        }
+
+        if (g_holding) {
+            return;
+        }
+
         int processLights = NUM_LIGHTS < numSentLights ? NUM_LIGHTS: numSentLights;
 
         for (int i = 0; i < processLights; i++) {
             int baseAddress = (i + 1) * BYTES_PER_LIGHT;
-            display.setPixelColor(
+            g_display.setPixelColor(
                 i,
-                packetBuffer[baseAddress],
-                packetBuffer[baseAddress + 1],
-                packetBuffer[baseAddress + 2],
-                packetBuffer[baseAddress + 3]
+                g_packetBuffer[baseAddress],
+                g_packetBuffer[baseAddress + 1],
+                g_packetBuffer[baseAddress + 2],
+                g_packetBuffer[baseAddress + 3]
             );
         }
 
@@ -101,6 +114,10 @@ inline void processPacket() {
             blankLight(i);
         }
 
-        display.show();
+        if (opcode == Opcode::Hold) {
+            g_holding = true;
+        }
+
+        g_display.show();
     }
 }
