@@ -19,6 +19,7 @@ import sys
 
 multicast_group = ('224.3.29.71', 4210)
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# sock.setsockopt(socket.SOL_SOCKET, 25, 'wlan0')
 sock.settimeout(0.2)
 ttl = struct.pack('b', 1)
 sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
@@ -58,8 +59,13 @@ def calculate_levels(data, bin_width, sample_rate):
     matrix = np.average(power,axis=1)
 
     # Map the resulting power to an easier-to-use scale
-    matrix = np.interp(matrix, (np.min(matrix), np.max(matrix)), (0.01, 255.0))
-    #matrix = np.interp(matrix, (25, np.max(matrix)), (0.01, 50))
+    #print "min: %s max: %s" % (np.min(matrix), np.max(matrix))
+    #threshold = 2.8
+    threshold = 2.5
+    matrix[matrix < threshold] = 0
+    max = np.max(matrix)
+    max = threshold if max < threshold else max
+    matrix = np.interp(matrix, (threshold, max), (0.01, 255.0))
 
     # Cast values down to int
     matrix = np.int_(matrix)
@@ -68,7 +74,7 @@ def calculate_levels(data, bin_width, sample_rate):
 
 print "Processing....."
 
-num_lights = 2
+num_lights = 3
 def make_packet(matrix):
     packet = [
         num_lights,
@@ -77,11 +83,15 @@ def make_packet(matrix):
         0, # reserved
     ]
 
+    val1 = matrix[1] # skip the bass
+    val2 = matrix[2]
+    val3 = matrix[3]
+
     for _ in range(0, num_lights):
         packet += [
-            matrix[1], # skip the bass
-            matrix[2],
-            matrix[3],
+            val1,
+            val2,
+            val3,
             0, # white
         ]
 
