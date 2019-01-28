@@ -11,7 +11,7 @@ sock.settimeout(0.2)
 ttl = struct.pack('b', 1)
 sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
 
-num_lights_default = 2
+num_lights_default = 3
 hold_id_default = 1
 
 class App:

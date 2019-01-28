@@ -6,11 +6,11 @@
 #define DEVICE_ID 1
 
 #define NEO_PIN    2
-#define NUM_LIGHTS 2
+#define NUM_LIGHTS 3
 #define BYTES_PER_LIGHT 4
 
-#define WIFI_SSID     "Hanshotfirst (2G)"
-#define WIFI_PASSWORD "12Parsecs"
+#define WIFI_SSID     "BlinkNet_01"
+#define WIFI_PASSWORD "amex4lyfe"
 
 #define UDP_PORT   4210
 #define UDP_GROUP_0 224
