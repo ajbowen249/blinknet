@@ -36,7 +36,7 @@ def init():
 
     bus = smbus.SMBus(BUS_INDEX)
 
-    data_in = aa.PCM(aa.PCM_CAPTURE, aa.PCM_NORMAL, 'hw:CARD=USB,DEV=0')
+    data_in = aa.PCM(aa.PCM_CAPTURE, aa.PCM_NORMAL, 'plughw:CARD=Microphone,DEV=0')
     data_in.setchannels(CHANNELS)
     data_in.setrate(SAMPLE_RATE)
     data_in.setformat(aa.PCM_FORMAT_S16_LE)
