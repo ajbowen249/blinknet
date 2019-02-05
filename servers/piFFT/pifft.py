@@ -13,6 +13,7 @@ import audioop
 import termplot
 
 import array
+import argparse
 import socket
 import struct
 import sys
@@ -25,6 +26,8 @@ CHANNELS = 1
 CHUNK = 256 #512
 NUM_LIGHTS = 3
 
+DEVICE = 'plughw:CARD=Microphone,DEV=0'
+
 SATURATION = 1
 VALUE = 1
 
@@ -36,7 +39,7 @@ def init():
 
     bus = smbus.SMBus(BUS_INDEX)
 
-    data_in = aa.PCM(aa.PCM_CAPTURE, aa.PCM_NORMAL, 'plughw:CARD=Microphone,DEV=0')
+    data_in = aa.PCM(aa.PCM_CAPTURE, aa.PCM_NORMAL, DEVICE)
     data_in.setchannels(CHANNELS)
     data_in.setrate(SAMPLE_RATE)
     data_in.setformat(aa.PCM_FORMAT_S16_LE)
@@ -120,7 +123,24 @@ def make_packet(matrix):
 
     return packet
 
+def process_args():
+    global BUS_INDEX
+    global DEVICE
+
+    parser = argparse.ArgumentParser(description='FFT transmistter')
+    parser.add_argument('--bus_index', action='store', dest='bus_index', type=int)
+    parser.add_argument('--device', action='store', dest='device')
+
+    ns = parser.parse_args(sys.argv[1:])
+    if ns.bus_index:
+        BUS_INDEX = ns.bus_index
+
+    if ns.device:
+        DEVICE = ns.device
+
+
 def main():
+    process_args()
     print('initializing...')
     sock, bus, data_in = init()
     print('processing')

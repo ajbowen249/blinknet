@@ -4,6 +4,13 @@ const child_process = require('child_process');
 
 const C_Port = 3000;
 
+const C_DefaultSettings = {
+    microphone_input: 'plughw:CARD=Microphone,DEV=0',
+    bus_index: 2,
+};
+
+var config = Object.assign({}, C_DefaultSettings);
+
 const guiPath = path.join(__dirname, '../fft-app/dist');
 const pyFFTPath = path.join(__dirname, '../../piFFT/pifft.py');
 
@@ -16,7 +23,48 @@ function restart() {
     if (pythonProcess) {
         pythonProcess.kill();
     }
-    pythonProcess = child_process.spawn('python2', [ pyFFTPath ]);
+
+    pythonProcess = child_process.spawn('python2', [
+        pyFFTPath,
+        '--bus_index', config.bus_index,
+        '--device', config.microphone_input,
+    ]);
+}
+
+var recordingDevices = [];
+
+function getRecordingDevices(done) {
+    const arecord = child_process.spawn('arecord', [ '-L' ]);
+
+    var output = '';
+    arecord.stdout.on('data', (data) => {
+        output += data.toString('utf8');
+    });
+
+    arecord.stdout.on('close', () => {
+        const lines = output.split(/\r?\n/);
+
+        var currentItem = undefined;
+        lines.forEach((line) => {
+            if (line.startsWith('    ')) {
+                currentItem.meta.push(line);
+            } else {
+                if (currentItem) {
+                    recordingDevices.push(currentItem);
+                }
+
+                currentItem = { name: line, meta: [] };
+            }
+        });
+
+        recordingDevices.push(currentItem);
+
+        done();
+    });
+}
+
+function checkRecordingDevice(deviceName) {
+    return recordingDevices.some((device) => device.name === deviceName);
 }
 
 app.use('/', express.static(guiPath));
@@ -26,8 +74,18 @@ app.post('/api/restart', (req, res) => {
     res.send(true);
 });
 
-restart();
+app.get('/api/state', async (req, res) => {
+    res.send(JSON.stringify({
+        state: {
+            recording_devices: recordingDevices,
+            config: config,
+        }
+    }));
+});
 
-app.listen(C_Port, () => {
-    console.log(`Listening on port ${C_Port}\nServing UI from ${guiPath}`);
+getRecordingDevices(() => {
+    restart();
+    app.listen(C_Port, () => {
+        console.log(`Listening on port ${C_Port}\nServing UI from ${guiPath}`);
+    });
 });
