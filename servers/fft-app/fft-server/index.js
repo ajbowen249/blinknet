@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const child_process = require('child_process');
+var bodyParser = require('body-parser');
 
 const C_Port = 3000;
 
@@ -16,13 +17,17 @@ const pyFFTPath = path.join(__dirname, '../../piFFT/pifft.py');
 
 const app = express();
 
+app.use(bodyParser.json());
+
 var pythonProcess = undefined;
 
-function restart() {
+function restart(newConfig) {
     console.log('restart');
     if (pythonProcess) {
         pythonProcess.kill();
     }
+
+    config = Object.assign(config, newConfig);
 
     pythonProcess = child_process.spawn('python2', [
         pyFFTPath,
@@ -70,7 +75,7 @@ function checkRecordingDevice(deviceName) {
 app.use('/', express.static(guiPath));
 
 app.post('/api/restart', (req, res) => {
-    restart();
+    restart(req.body.config);
     res.send(true);
 });
 

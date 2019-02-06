@@ -20,26 +20,23 @@ import sys
 import colorsys
 
 MULTICAST_GROUP = ('224.3.29.71', 4210)
-BUS_INDEX = 2
 SAMPLE_RATE = 14400 #44100
 CHANNELS = 1
 CHUNK = 256 #512
 NUM_LIGHTS = 3
 
-DEVICE = 'plughw:CARD=Microphone,DEV=0'
-
 SATURATION = 1
 VALUE = 1
 
-def init():
+def init(bus_index, device):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.settimeout(0.2)
     ttl = struct.pack('b', 1)
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
 
-    bus = smbus.SMBus(BUS_INDEX)
+    bus = smbus.SMBus(bus_index)
 
-    data_in = aa.PCM(aa.PCM_CAPTURE, aa.PCM_NORMAL, DEVICE)
+    data_in = aa.PCM(aa.PCM_CAPTURE, aa.PCM_NORMAL, device)
     data_in.setchannels(CHANNELS)
     data_in.setrate(SAMPLE_RATE)
     data_in.setformat(aa.PCM_FORMAT_S16_LE)
@@ -123,9 +120,9 @@ def make_packet(matrix):
 
     return packet
 
-def process_args():
-    global BUS_INDEX
-    global DEVICE
+def get_params():
+    bus_index = 2
+    device = 'plughw:CARD=Microphone,DEV=0'
 
     parser = argparse.ArgumentParser(description='FFT transmistter')
     parser.add_argument('--bus_index', action='store', dest='bus_index', type=int)
@@ -133,16 +130,18 @@ def process_args():
 
     ns = parser.parse_args(sys.argv[1:])
     if ns.bus_index:
-        BUS_INDEX = ns.bus_index
+        bus_index = ns.bus_index
 
     if ns.device:
-        DEVICE = ns.device
+        device = ns.device
+
+    return (bus_index, device)
 
 
 def main():
-    process_args()
+    (bus_index, device) = get_params()
     print('initializing...')
-    sock, bus, data_in = init()
+    sock, bus, data_in = init(bus_index, device)
     print('processing')
 
     while(True):

@@ -24,7 +24,11 @@ import * as api from '../utils/api';
 export default {
     methods: {
         async restart() {
-            await api.restart();
+            await api.restart({
+                bus_index: this.selectedBusIndex,
+                microphone_input: this.selectedMicrophone,
+            });
+
             await this.getState();
         },
         async getState() {
