@@ -45,7 +45,7 @@ def init(bus_index, device):
 
     return (sock, bus, data_in)
 
-def calculate_levels(data, bin_width):
+def calculate_levels(data, fft_bins):
     # Convert raw data to numpy array
     data = unpack('%dh'%(len(data)/2),data)
     data = np.array(data, dtype='h')
@@ -60,7 +60,7 @@ def calculate_levels(data, bin_width):
     power = np.log10(np.abs(fourier))
 
     # Arange array into 8 rows for the 8 bars on LED matrix
-    power = np.reshape(power,(bin_width, len(power)/bin_width))
+    power = np.reshape(power,(fft_bins, len(power)/fft_bins))
 
     # Collapse the 2-D array to 1-D by averaging columns
     matrix = np.average(power, axis=1)
@@ -124,20 +124,20 @@ def make_packet(matrix):
 def get_params():
     bus_index = 2
     device = 'plughw:CARD=Microphone,DEV=0'
-    bin_width = 32
+    fft_bins = 32
 
     parser = argparse.ArgumentParser(description='FFT transmistter')
     parser.add_argument("--print-defaults", dest="print_defaults", action="store_true", help="print out default values")
-    parser.add_argument('--bus_index', action='store', dest='bus_index', type=int)
+    parser.add_argument('--bus-index', action='store', dest='bus_index', type=int)
     parser.add_argument('--device', action='store', dest='device')
-    parser.add_argument('--bin_width', action='store', dest='bin_width', type=int)
+    parser.add_argument('--fft-bins', action='store', dest='fft_bins', type=int)
 
     ns = parser.parse_args(sys.argv[1:])
     if ns.print_defaults:
         print(json.dumps({
             'bus_index': bus_index,
             'device': device,
-            'bin_width': bin_width,
+            'fft_bins': fft_bins,
         }))
         sys.exit()
 
@@ -148,14 +148,14 @@ def get_params():
     if ns.device:
         device = ns.device
 
-    if ns.bin_width:
-        bin_width = ns.bin_width
+    if ns.fft_bins:
+        fft_bins = ns.fft_bins
 
-    return (bus_index, device, bin_width)
+    return (bus_index, device, fft_bins)
 
 
 def main():
-    (bus_index, device, bin_width) = get_params()
+    (bus_index, device, fft_bins) = get_params()
     print('initializing...')
     sock, bus, data_in = init(bus_index, device)
     print('processing')
@@ -165,7 +165,7 @@ def main():
         data_in.pause(1)
         if l:
             try:
-                matrix = calculate_levels(data, bin_width)
+                matrix = calculate_levels(data, fft_bins)
                 sock.sendto(array.array('B', make_packet(matrix)).tostring(), MULTICAST_GROUP)
 
             except audioop.error, e:

@@ -44,8 +44,9 @@ function restart(newConfig) {
 
     pythonProcess = child_process.spawn('python2', [
         pyFFTPath,
-        '--bus_index', config.bus_index,
+        '--bus-index', config.bus_index,
         '--device', config.device,
+        '--fft-bins', config.fft_bins,
     ]);
 }
 

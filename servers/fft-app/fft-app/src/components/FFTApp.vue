@@ -16,6 +16,16 @@
                 </select>
             </div>
             <div>
+                FFT Bins
+                <select v-model="selectedFFTBins">
+                    <option value="4">4</option>
+                    <option value="8">8</option>
+                    <option value="16">16</option>
+                    <option value="32">32</option>
+                    <option value="64">64</option>
+                </select>
+            </div>
+            <div>
                 Device
                 <select v-model="selectedDevice">
                     <option v-for="microphone in microphoneOptions"
@@ -43,15 +53,19 @@ export default {
             await api.restart({
                 bus_index: this.selectedBusIndex,
                 device: this.selectedDevice,
+                fft_bins: this.selectedFFTBins,
             });
 
             await this.getState();
         },
         async getState() {
             const state = (await api.getState()).state;
+            this.microphoneOptions = state.recording_devices;
+
             this.selectedDevice = state.config.device;
             this.selectedBusIndex = state.config.bus_index;
-            this.microphoneOptions = state.recording_devices;
+            this.selectedFFTBins = state.config.fft_bins;
+
             this.haveInitialState = true;
         }
     },
@@ -64,6 +78,7 @@ export default {
             selectedDevice: '',
             microphoneOptions: [],
             selectedBusIndex: -1,
+            selectedFFTBins: -1,
         };
     }
 }
