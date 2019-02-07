@@ -45,22 +45,22 @@ def init(bus_index, device):
 
     return (sock, bus, data_in)
 
-def calculate_levels(data, fft_bins):
+def get_raw_fft(data, fft_bins):
     # Convert raw data to numpy array
-    data = unpack('%dh'%(len(data)/2),data)
+    data = unpack('%dh' % (len(data) / 2), data)
     data = np.array(data, dtype='h')
+
     # Apply FFT - real data so rfft used
     fourier = np.fft.rfft(data)
 
     # Remove last element in array to make it the same size as chunk
-    fourier = np.delete(fourier, len(fourier)-1)
-    #fourier = np.delete(fourier, 10)
+    fourier = np.delete(fourier, len(fourier) - 1)
 
     # Find amplitude
     power = np.log10(np.abs(fourier))
 
-    # Arange array into 8 rows for the 8 bars on LED matrix
-    power = np.reshape(power,(fft_bins, len(power)/fft_bins))
+    # Reshape the array to the number of bins we want
+    power = np.reshape(power,(fft_bins, len(power) / fft_bins))
 
     # Collapse the 2-D array to 1-D by averaging columns
     matrix = np.average(power, axis=1)
@@ -71,22 +71,40 @@ def calculate_levels(data, fft_bins):
     max = np.max(matrix)
     max = threshold if max < threshold else max
     matrix = np.interp(matrix, (threshold, max), (0.01, 1.0))
-    # matrix = np.interp(matrix, (np.min(matrix), np.max(matrix)), (0.01, 1.0))
 
-    bins = np.fft.rfftfreq(len(data), 1.0/SAMPLE_RATE)
-    #print(bins)
+    return matrix
+
+def merge_bins(matrix, fft_bins):
+    if fft_bins == 8:
+        # 8->6->3
+        matrix = np.delete(matrix, 0)
+        matrix = np.delete(matrix, len(matrix) - 1)
+
+        matrix = np.reshape(matrix,(3, 2))
+        matrix = np.average(matrix, axis=1)
+    elif fft_bins == 16:
+        # 16->15->3
+        matrix = np.delete(matrix, 0)
+
+        matrix = np.reshape(matrix,(3, 5))
+        matrix = np.average(matrix, axis=1)
+    elif fft_bins == 32:
+        # 32->30->3
+        matrix = np.delete(matrix, 0)
+        matrix = np.delete(matrix, len(matrix) - 1)
+
+        matrix = np.reshape(matrix,(3, 10))
+        matrix = np.average(matrix, axis=1)
+    elif fft_bins == 64:
+        # 64->63->3
+        matrix = np.delete(matrix, 0)
+
+        matrix = np.reshape(matrix,(3, 21))
+        matrix = np.average(matrix, axis=1)
+
     return matrix
 
 def make_packet(matrix):
-    # matrix comes in with 32 values. Drop the lowest and highest to get 30
-    matrix = np.delete(matrix, 0)
-    matrix = np.delete(matrix, len(matrix)-1)
-
-    # 15 is a multiple of 3. Compress into 3 values
-    matrix = np.reshape(matrix,(3, 10))
-    matrix = np.average(matrix, axis=1)
-
-
     packet = [
         NUM_LIGHTS,
         0, # broadcast
@@ -139,6 +157,7 @@ def get_params():
             'device': device,
             'fft_bins': fft_bins,
         }))
+
         sys.exit()
 
 
@@ -156,8 +175,10 @@ def get_params():
 
 def main():
     (bus_index, device, fft_bins) = get_params()
+
     print('initializing...')
     sock, bus, data_in = init(bus_index, device)
+
     print('processing')
 
     while(True):
@@ -165,8 +186,8 @@ def main():
         data_in.pause(1)
         if l:
             try:
-                matrix = calculate_levels(data, fft_bins)
-                sock.sendto(array.array('B', make_packet(matrix)).tostring(), MULTICAST_GROUP)
+                matrix = get_raw_fft(data, fft_bins)
+                sock.sendto(array.array('B', make_packet(merge_bins(matrix, fft_bins))).tostring(), MULTICAST_GROUP)
 
             except audioop.error, e:
                 if e.message != 'not a whole number of frames':
