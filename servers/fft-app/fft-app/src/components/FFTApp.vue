@@ -24,6 +24,24 @@
                     <option value="64">64</option>
                 </select>
             </div>
+            <div class="equalizer">
+                <div>
+                    <input type="range" min="0" max="10" step=".1" orient="vertical" v-model="threshold" /> <br />
+                    T
+                </div>
+                <div>
+                    <input type="range" min="0" max="10" step=".1" orient="vertical" v-model="lowScaler" /> <br />
+                    L
+                </div>
+                <div>
+                    <input type="range" min="0" max="10" step=".1" orient="vertical" v-model="midScaler" /> <br />
+                    M
+                </div>
+                <div>
+                    <input type="range" min="0" max="10" step=".1" orient="vertical" v-model="highScaler" /> <br />
+                    H
+                </div>
+            </div>
             <div>
                 Device
                 <select v-model="selectedDevice">
@@ -53,6 +71,10 @@ export default {
                 bus_index: this.selectedBusIndex,
                 device: this.selectedDevice,
                 fft_bins: this.selectedFFTBins,
+                threshold: this.threshold,
+                low_scaler: this.lowScaler,
+                mid_scaler: this.midScaler,
+                high_scaler: this.highScaler,
             });
 
             await this.getState();
@@ -64,6 +86,10 @@ export default {
             this.selectedDevice = state.config.device;
             this.selectedBusIndex = state.config.bus_index;
             this.selectedFFTBins = state.config.fft_bins;
+            this.threshold = state.config.threshold;
+            this.lowScaler = state.config.low_scaler;
+            this.midScaler = state.config.mid_scaler;
+            this.highScaler = state.config.high_scaler;
 
             this.haveInitialState = true;
         }
@@ -78,6 +104,10 @@ export default {
             microphoneOptions: [],
             selectedBusIndex: -1,
             selectedFFTBins: -1,
+            threshold: -1,
+            lowScaler: -1,
+            midScaler: -1,
+            highScaler: -1,
         };
     }
 }
@@ -88,6 +118,19 @@ export default {
 
 .main-controls > div {
     margin-bottom: .5rem;
+}
+
+.equalizer > div {
+    display: inline-block;
+}
+
+input[type=range][orient=vertical]
+{
+    writing-mode: bt-lr; /* IE */
+    -webkit-appearance: slider-vertical; /* WebKit */
+    width: 8px;
+    height: 175px;
+    padding: 0 5px;
 }
 
 </style>

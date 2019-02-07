@@ -45,7 +45,7 @@ def init(bus_index, device):
 
     return (sock, bus, data_in)
 
-def get_raw_fft(data, fft_bins):
+def get_raw_fft(data, fft_bins, threshold):
     # Convert raw data to numpy array
     data = unpack('%dh' % (len(data) / 2), data)
     data = np.array(data, dtype='h')
@@ -65,8 +65,6 @@ def get_raw_fft(data, fft_bins):
     # Collapse the 2-D array to 1-D by averaging columns
     matrix = np.average(power, axis=1)
 
-    # Map the resulting power to an easier-to-use scale
-    threshold = 2.5
     matrix[matrix < threshold] = 0
     max = np.max(matrix)
     max = threshold if max < threshold else max
@@ -74,7 +72,7 @@ def get_raw_fft(data, fft_bins):
 
     return matrix
 
-def merge_bins(matrix, fft_bins):
+def post_process(matrix, fft_bins, low_scaler, mid_scaler, high_scaler):
     if fft_bins == 8:
         # 8->6->3
         matrix = np.delete(matrix, 0)
@@ -96,11 +94,24 @@ def merge_bins(matrix, fft_bins):
         matrix = np.reshape(matrix,(3, 10))
         matrix = np.average(matrix, axis=1)
     elif fft_bins == 64:
-        # 64->63->3
+        # 64->54->3
+        matrix = np.delete(matrix, 0)
+        matrix = np.delete(matrix, 0)
+        matrix = np.delete(matrix, 0)
+        matrix = np.delete(matrix, 0)
+        matrix = np.delete(matrix, 0)
+        matrix = np.delete(matrix, 0)
+        matrix = np.delete(matrix, 0)
+        matrix = np.delete(matrix, 0)
+        matrix = np.delete(matrix, 0)
         matrix = np.delete(matrix, 0)
 
-        matrix = np.reshape(matrix,(3, 21))
+        matrix = np.reshape(matrix,(3, 18))
         matrix = np.average(matrix, axis=1)
+
+    matrix[0] *= low_scaler
+    matrix[1] *= mid_scaler
+    matrix[2] *= high_scaler
 
     return matrix
 
@@ -143,12 +154,22 @@ def get_params():
     bus_index = 2
     device = 'plughw:CARD=Microphone,DEV=0'
     fft_bins = 32
+    threshold = 2.5
+    low_scaler = 1
+    mid_scaler = 1
+    high_scaler = 1
+
+    # suggested new defaults: l - 0.4 m - 1, h - 1.9
 
     parser = argparse.ArgumentParser(description='FFT transmistter')
     parser.add_argument("--print-defaults", dest="print_defaults", action="store_true", help="print out default values")
     parser.add_argument('--bus-index', action='store', dest='bus_index', type=int)
     parser.add_argument('--device', action='store', dest='device')
     parser.add_argument('--fft-bins', action='store', dest='fft_bins', type=int)
+    parser.add_argument('--threshold', action='store', dest='threshold', type=float)
+    parser.add_argument('--low-scaler', action='store', dest='low_scaler', type=float)
+    parser.add_argument('--mid-scaler', action='store', dest='mid_scaler', type=float)
+    parser.add_argument('--high-scaler', action='store', dest='high_scaler', type=float)
 
     ns = parser.parse_args(sys.argv[1:])
     if ns.print_defaults:
@@ -156,6 +177,10 @@ def get_params():
             'bus_index': bus_index,
             'device': device,
             'fft_bins': fft_bins,
+            'threshold': threshold,
+            'low_scaler': low_scaler,
+            'mid_scaler': mid_scaler,
+            'high_scaler': high_scaler,
         }))
 
         sys.exit()
@@ -170,11 +195,23 @@ def get_params():
     if ns.fft_bins:
         fft_bins = ns.fft_bins
 
-    return (bus_index, device, fft_bins)
+    if ns.threshold:
+        threshold = ns.threshold
+
+    if ns.low_scaler:
+        low_scaler = ns.low_scaler
+
+    if ns.mid_scaler:
+        mid_scaler = ns.mid_scaler
+
+    if ns.high_scaler:
+        high_scaler = ns.high_scaler
+
+    return (bus_index, device, fft_bins, threshold, low_scaler, mid_scaler, high_scaler)
 
 
 def main():
-    (bus_index, device, fft_bins) = get_params()
+    (bus_index, device, fft_bins, threshold, low_scaler, mid_scaler, high_scaler) = get_params()
 
     print('initializing...')
     sock, bus, data_in = init(bus_index, device)
@@ -186,8 +223,9 @@ def main():
         data_in.pause(1)
         if l:
             try:
-                matrix = get_raw_fft(data, fft_bins)
-                sock.sendto(array.array('B', make_packet(merge_bins(matrix, fft_bins))).tostring(), MULTICAST_GROUP)
+                matrix = get_raw_fft(data, fft_bins, threshold)
+                matrix = post_process(matrix, fft_bins, low_scaler, mid_scaler, high_scaler)
+                sock.sendto(array.array('B', make_packet(matrix)).tostring(), MULTICAST_GROUP)
 
             except audioop.error, e:
                 if e.message != 'not a whole number of frames':

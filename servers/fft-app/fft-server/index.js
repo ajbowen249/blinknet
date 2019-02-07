@@ -47,6 +47,10 @@ function restart(newConfig) {
         '--bus-index', config.bus_index,
         '--device', config.device,
         '--fft-bins', config.fft_bins,
+        '--threshold', config.threshold,
+        '--low-scaler', config.low_scaler,
+        '--mid-scaler', config.mid_scaler,
+        '--high-scaler', config.high_scaler,
     ]);
 }
 
