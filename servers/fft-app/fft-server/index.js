@@ -5,12 +5,8 @@ var bodyParser = require('body-parser');
 
 const C_Port = 3000;
 
-const C_DefaultSettings = {
-    microphone_input: 'plughw:CARD=Microphone,DEV=0',
-    bus_index: 2,
-};
-
-var config = Object.assign({}, C_DefaultSettings);
+var defaultSettings = {};
+var config = {};
 
 const guiPath = path.join(__dirname, '../fft-app/dist');
 const pyFFTPath = path.join(__dirname, '../../piFFT/pifft.py');
@@ -21,8 +17,25 @@ app.use(bodyParser.json());
 
 var pythonProcess = undefined;
 
+function getDefaults(done) {
+    const getDefaults = child_process.spawn('python2', [
+        pyFFTPath,
+        '--print-defaults',
+    ]);
+
+    var output = '';
+    getDefaults.stdout.on('data', (data) => {
+        output += data.toString('utf8');
+    });
+
+    getDefaults.stdout.on('close', () => {
+        defaultSettings = JSON.parse(output);
+        config = Object.assign({}, defaultSettings);
+        done();
+    });
+}
+
 function restart(newConfig) {
-    console.log('restart');
     if (pythonProcess) {
         pythonProcess.kill();
     }
@@ -32,7 +45,7 @@ function restart(newConfig) {
     pythonProcess = child_process.spawn('python2', [
         pyFFTPath,
         '--bus_index', config.bus_index,
-        '--device', config.microphone_input,
+        '--device', config.device,
     ]);
 }
 
@@ -88,9 +101,11 @@ app.get('/api/state', async (req, res) => {
     }));
 });
 
-getRecordingDevices(() => {
-    restart();
-    app.listen(C_Port, () => {
-        console.log(`Listening on port ${C_Port}\nServing UI from ${guiPath}`);
+getDefaults(() => {
+    getRecordingDevices(() => {
+        restart();
+        app.listen(C_Port, () => {
+            console.log(`Listening on port ${C_Port}\nServing UI from ${guiPath}`);
+        });
     });
 });

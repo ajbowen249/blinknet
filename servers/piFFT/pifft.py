@@ -5,19 +5,20 @@
 # https://www.raspberrypi.org/forums/viewtopic.php?t=35838&p=454041
 
 import alsaaudio as aa
-import smbus
-from time import sleep
-from struct import unpack
-import numpy as np
-import audioop
-import termplot
-
-import array
 import argparse
+import array
+import audioop
+import colorsys
+import json
+import numpy as np
+import smbus
 import socket
 import struct
 import sys
-import colorsys
+import termplot
+
+from struct import unpack
+from time import sleep
 
 MULTICAST_GROUP = ('224.3.29.71', 4210)
 SAMPLE_RATE = 14400 #44100
@@ -123,23 +124,38 @@ def make_packet(matrix):
 def get_params():
     bus_index = 2
     device = 'plughw:CARD=Microphone,DEV=0'
+    bin_width = 32
 
     parser = argparse.ArgumentParser(description='FFT transmistter')
+    parser.add_argument("--print-defaults", dest="print_defaults", action="store_true", help="print out default values")
     parser.add_argument('--bus_index', action='store', dest='bus_index', type=int)
     parser.add_argument('--device', action='store', dest='device')
+    parser.add_argument('--bin_width', action='store', dest='bin_width', type=int)
 
     ns = parser.parse_args(sys.argv[1:])
+    if ns.print_defaults:
+        print(json.dumps({
+            'bus_index': bus_index,
+            'device': device,
+            'bin_width': bin_width,
+        }))
+        sys.exit()
+
+
     if ns.bus_index:
         bus_index = ns.bus_index
 
     if ns.device:
         device = ns.device
 
-    return (bus_index, device)
+    if ns.bin_width:
+        bin_width = ns.bin_width
+
+    return (bus_index, device, bin_width)
 
 
 def main():
-    (bus_index, device) = get_params()
+    (bus_index, device, bin_width) = get_params()
     print('initializing...')
     sock, bus, data_in = init(bus_index, device)
     print('processing')
@@ -149,7 +165,7 @@ def main():
         data_in.pause(1)
         if l:
             try:
-                matrix = calculate_levels(data, 32)
+                matrix = calculate_levels(data, bin_width)
                 sock.sendto(array.array('B', make_packet(matrix)).tostring(), MULTICAST_GROUP)
 
             except audioop.error, e:

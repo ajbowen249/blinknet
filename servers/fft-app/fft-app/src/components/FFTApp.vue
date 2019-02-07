@@ -1,18 +1,34 @@
 <template>
     <div>
-        <div>
-            <button v-on:click="restart()">Restart</button>
+        <div v-if="!haveInitialState">
+            Connecting...
         </div>
-        <div>
-            Microphone
-            <select v-model="selectedMicrophone">
-                <option v-for="microphone in microphoneOptions"
-                        v-bind:key="microphone.name"
-                        v-bind:value="microphone.name">
-                        {{ microphone.name }}
-                        ( {{ microphone.meta.join(' ') }} )
-                </option>
-            </select>
+        <div v-else class="main-controls">
+            <div>
+                Bus Index
+                <select v-model="selectedBusIndex">
+                    <option value="0">0</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                </select>
+            </div>
+            <div>
+                Device
+                <select v-model="selectedDevice">
+                    <option v-for="microphone in microphoneOptions"
+                            v-bind:key="microphone.name"
+                            v-bind:value="microphone.name">
+                            {{ microphone.name }}
+                            ( {{ microphone.meta.join(' ') }} )
+                    </option>
+                </select>
+            </div>
+            <div>
+                <button v-on:click="restart()">Restart</button>
+            </div>
         </div>
     </div>
 </template>
@@ -26,16 +42,17 @@ export default {
         async restart() {
             await api.restart({
                 bus_index: this.selectedBusIndex,
-                microphone_input: this.selectedMicrophone,
+                device: this.selectedDevice,
             });
 
             await this.getState();
         },
         async getState() {
             const state = (await api.getState()).state;
-            this.selectedMicrophone = state.config.microphone_input;
+            this.selectedDevice = state.config.device;
             this.selectedBusIndex = state.config.bus_index;
             this.microphoneOptions = state.recording_devices;
+            this.haveInitialState = true;
         }
     },
     mounted: async function() {
@@ -43,9 +60,10 @@ export default {
     },
     data() {
         return {
-            selectedMicrophone: '',
+            haveInitialState: false,
+            selectedDevice: '',
             microphoneOptions: [],
-            selectedBusIndex: 2,
+            selectedBusIndex: -1,
         };
     }
 }
@@ -53,5 +71,9 @@ export default {
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
+
+.main-controls > div {
+    margin-bottom: .5rem;
+}
 
 </style>
