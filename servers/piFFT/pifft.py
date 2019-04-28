@@ -21,9 +21,9 @@ from struct import unpack
 from time import sleep
 
 MULTICAST_GROUP = ('224.3.29.71', 4210)
-SAMPLE_RATE = 14400 #44100
+SAMPLE_RATE = 44100
 CHANNELS = 1
-CHUNK = 256 #512
+CHUNK = 512
 NUM_LIGHTS = 3
 
 SATURATION = 1
@@ -151,8 +151,8 @@ def make_packet(matrix):
     return packet
 
 def get_params():
-    bus_index = 2
-    device = 'plughw:CARD=Microphone,DEV=0'
+    bus_index = 1
+    device = 'hw:CARD=Microphone,DEV=0'
     fft_bins = 32
     threshold = 2.5
     low_scaler = 1
