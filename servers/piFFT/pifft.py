@@ -29,6 +29,8 @@ NUM_LIGHTS = 3
 SATURATION = 1
 VALUE = 1
 
+FFT_BINS = 64
+
 def init(bus_index, device):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.settimeout(0.2)
@@ -45,7 +47,7 @@ def init(bus_index, device):
 
     return (sock, bus, data_in)
 
-def get_raw_fft(data, fft_bins, threshold):
+def get_raw_fft(data, threshold):
     # Convert raw data to numpy array
     data = unpack('%dh' % (len(data) / 2), data)
     data = np.array(data, dtype='h')
@@ -60,7 +62,7 @@ def get_raw_fft(data, fft_bins, threshold):
     power = np.log10(np.abs(fourier))
 
     # Reshape the array to the number of bins we want
-    power = np.reshape(power,(fft_bins, len(power) / fft_bins))
+    power = np.reshape(power,(FFT_BINS, len(power) / FFT_BINS))
 
     # Collapse the 2-D array to 1-D by averaging columns
     matrix = np.average(power, axis=1)
@@ -72,42 +74,21 @@ def get_raw_fft(data, fft_bins, threshold):
 
     return matrix
 
-def post_process(matrix, fft_bins, low_scaler, mid_scaler, high_scaler):
-    if fft_bins == 8:
-        # 8->6->3
-        matrix = np.delete(matrix, 0)
-        matrix = np.delete(matrix, len(matrix) - 1)
+def post_process(matrix, low_scaler, mid_scaler, high_scaler):
+    # 64->54->3
+    matrix = np.delete(matrix, 0)
+    matrix = np.delete(matrix, 0)
+    matrix = np.delete(matrix, 0)
+    matrix = np.delete(matrix, 0)
+    matrix = np.delete(matrix, 0)
+    matrix = np.delete(matrix, 0)
+    matrix = np.delete(matrix, 0)
+    matrix = np.delete(matrix, 0)
+    matrix = np.delete(matrix, 0)
+    matrix = np.delete(matrix, 0)
 
-        matrix = np.reshape(matrix,(3, 2))
-        matrix = np.average(matrix, axis=1)
-    elif fft_bins == 16:
-        # 16->15->3
-        matrix = np.delete(matrix, 0)
-
-        matrix = np.reshape(matrix,(3, 5))
-        matrix = np.average(matrix, axis=1)
-    elif fft_bins == 32:
-        # 32->30->3
-        matrix = np.delete(matrix, 0)
-        matrix = np.delete(matrix, len(matrix) - 1)
-
-        matrix = np.reshape(matrix,(3, 10))
-        matrix = np.average(matrix, axis=1)
-    elif fft_bins == 64:
-        # 64->54->3
-        matrix = np.delete(matrix, 0)
-        matrix = np.delete(matrix, 0)
-        matrix = np.delete(matrix, 0)
-        matrix = np.delete(matrix, 0)
-        matrix = np.delete(matrix, 0)
-        matrix = np.delete(matrix, 0)
-        matrix = np.delete(matrix, 0)
-        matrix = np.delete(matrix, 0)
-        matrix = np.delete(matrix, 0)
-        matrix = np.delete(matrix, 0)
-
-        matrix = np.reshape(matrix,(3, 18))
-        matrix = np.average(matrix, axis=1)
+    matrix = np.reshape(matrix,(3, 18))
+    matrix = np.average(matrix, axis=1)
 
     matrix[0] *= low_scaler
     matrix[1] *= mid_scaler
@@ -151,9 +132,8 @@ def make_packet(matrix):
     return packet
 
 def get_params():
-    bus_index = 2
+    bus_index = 1 #2
     device = 'plughw:CARD=Microphone,DEV=0'
-    fft_bins = 32
     threshold = 2.5
     low_scaler = 1
     mid_scaler = 1
@@ -165,7 +145,6 @@ def get_params():
     parser.add_argument("--print-defaults", dest="print_defaults", action="store_true", help="print out default values")
     parser.add_argument('--bus-index', action='store', dest='bus_index', type=int)
     parser.add_argument('--device', action='store', dest='device')
-    parser.add_argument('--fft-bins', action='store', dest='fft_bins', type=int)
     parser.add_argument('--threshold', action='store', dest='threshold', type=float)
     parser.add_argument('--low-scaler', action='store', dest='low_scaler', type=float)
     parser.add_argument('--mid-scaler', action='store', dest='mid_scaler', type=float)
@@ -176,7 +155,6 @@ def get_params():
         print(json.dumps({
             'bus_index': bus_index,
             'device': device,
-            'fft_bins': fft_bins,
             'threshold': threshold,
             'low_scaler': low_scaler,
             'mid_scaler': mid_scaler,
@@ -192,9 +170,6 @@ def get_params():
     if ns.device:
         device = ns.device
 
-    if ns.fft_bins:
-        fft_bins = ns.fft_bins
-
     if ns.threshold:
         threshold = ns.threshold
 
@@ -207,11 +182,11 @@ def get_params():
     if ns.high_scaler:
         high_scaler = ns.high_scaler
 
-    return (bus_index, device, fft_bins, threshold, low_scaler, mid_scaler, high_scaler)
+    return (bus_index, device, threshold, low_scaler, mid_scaler, high_scaler)
 
 
 def main():
-    (bus_index, device, fft_bins, threshold, low_scaler, mid_scaler, high_scaler) = get_params()
+    (bus_index, device, threshold, low_scaler, mid_scaler, high_scaler) = get_params()
 
     print('initializing...')
     sock, bus, data_in = init(bus_index, device)
@@ -223,8 +198,8 @@ def main():
         data_in.pause(1)
         if l:
             try:
-                matrix = get_raw_fft(data, fft_bins, threshold)
-                matrix = post_process(matrix, fft_bins, low_scaler, mid_scaler, high_scaler)
+                matrix = get_raw_fft(data, threshold)
+                matrix = post_process(matrix, low_scaler, mid_scaler, high_scaler)
                 sock.sendto(array.array('B', make_packet(matrix)).tostring(), MULTICAST_GROUP)
 
             except audioop.error, e:

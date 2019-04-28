@@ -15,15 +15,6 @@
                     <option value="5">5</option>
                 </select>
             </div>
-            <div>
-                FFT Bins
-                <select v-model="selectedFFTBins">
-                    <option value="8">8</option>
-                    <option value="16">16</option>
-                    <option value="32">32</option>
-                    <option value="64">64</option>
-                </select>
-            </div>
             <div class="equalizer">
                 <div>
                     <input type="range" min="0" max="10" step=".1" orient="vertical" v-model="threshold" /> <br />
@@ -70,7 +61,6 @@ export default {
             await api.restart({
                 bus_index: this.selectedBusIndex,
                 device: this.selectedDevice,
-                fft_bins: this.selectedFFTBins,
                 threshold: this.threshold,
                 low_scaler: this.lowScaler,
                 mid_scaler: this.midScaler,
@@ -85,7 +75,6 @@ export default {
 
             this.selectedDevice = state.config.device;
             this.selectedBusIndex = state.config.bus_index;
-            this.selectedFFTBins = state.config.fft_bins;
             this.threshold = state.config.threshold;
             this.lowScaler = state.config.low_scaler;
             this.midScaler = state.config.mid_scaler;
@@ -103,7 +92,6 @@ export default {
             selectedDevice: '',
             microphoneOptions: [],
             selectedBusIndex: -1,
-            selectedFFTBins: -1,
             threshold: -1,
             lowScaler: -1,
             midScaler: -1,
