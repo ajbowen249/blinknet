@@ -37,7 +37,7 @@
                                 <input type="range" min="0" max="100" step="1" orient="horizontal" v-model="bassCutoff" @change="onConfigChanged" />
                             </td>
                             <td>
-                                {{ bassCutoffFrequency }}
+                                {{ bassCutoffFrequency }} ({{ bassCutoff }})
                             </td>
                         </tr>
                         <tr>
@@ -48,7 +48,7 @@
                                 <input type="range" min="0" max="100" step="1" orient="horizontal" v-model="midStart" @change="onConfigChanged" />
                             </td>
                             <td>
-                                {{ midStartFrequency }}
+                                {{ midStartFrequency }} ({{ midStart }})
                             </td>
                         </tr>
                         <tr>
@@ -59,7 +59,7 @@
                                 <input type="range" min="0" max="100" step="1" orient="horizontal" v-model="trebleStart" @change="onConfigChanged" />
                             </td>
                             <td>
-                                {{ trebleStartFrequency }}
+                                {{ trebleStartFrequency }} ({{ trebleStart }})
                             </td>
                         </tr>
                     </table>
