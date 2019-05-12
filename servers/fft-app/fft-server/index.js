@@ -7,6 +7,7 @@ const C_Port = 3000;
 
 var defaultSettings = {};
 var config = {};
+var dftInfo = {};
 
 const guiPath = path.join(__dirname, '../fft-app/dist');
 const pyFFTPath = path.join(__dirname, '../../piFFT/pifft.py');
@@ -31,7 +32,21 @@ function getDefaults(done) {
     getDefaults.stdout.on('close', () => {
         defaultSettings = JSON.parse(output);
         config = Object.assign({}, defaultSettings);
-        done();
+
+        const getFrequencies = child_process.spawn('python2', [
+            pyFFTPath,
+            '--print-dft-info',
+        ]);
+
+        var output2 = '';
+        getFrequencies.stdout.on('data', (data) => {
+            output2 += data.toString('utf8');
+        });
+
+        getFrequencies.stdout.on('close', () => {
+            dftInfo = JSON.parse(output2);
+            done();
+        });
     });
 }
 
@@ -102,11 +117,17 @@ app.post('/api/restart', (req, res) => {
     res.send(true);
 });
 
+app.post('/api/reset', (req, res) => {
+    restart(defaultSettings);
+    res.send(true);
+});
+
 app.get('/api/state', async (req, res) => {
     res.send(JSON.stringify({
         state: {
             recording_devices: recordingDevices,
             config: config,
+            dft_info: dftInfo,
         }
     }));
 });

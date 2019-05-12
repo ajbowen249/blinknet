@@ -4,33 +4,26 @@
             Connecting...
         </div>
         <div v-else class="main-controls">
-            <div>
-                Bus Index
-                <select v-model="selectedBusIndex">
-                    <option value="0">0</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                    <option value="5">5</option>
-                </select>
-            </div>
             <div class="equalizer">
                 <div>
-                    <input type="range" min="0" max="10" step=".1" orient="vertical" v-model="threshold" /> <br />
-                    T
+                    T <br />
+                    <input type="range" min="0" max="10" step=".1" orient="vertical" v-model="threshold" @change="onConfigChanged" /> <br />
+                    {{ threshold }}
                 </div>
                 <div>
-                    <input type="range" min="0" max="10" step=".1" orient="vertical" v-model="lowScaler" /> <br />
-                    L
+                    L <br />
+                    <input type="range" min="0" max="5" step=".1" orient="vertical" v-model="lowScaler" @change="onConfigChanged" /> <br />
+                    {{ lowScaler }}
                 </div>
                 <div>
-                    <input type="range" min="0" max="10" step=".1" orient="vertical" v-model="midScaler" /> <br />
-                    M
+                    M <br />
+                    <input type="range" min="0" max="5" step=".1" orient="vertical" v-model="midScaler" @change="onConfigChanged" /> <br />
+                    {{ midScaler }}
                 </div>
                 <div>
-                    <input type="range" min="0" max="10" step=".1" orient="vertical" v-model="highScaler" /> <br />
-                    H
+                    H <br />
+                    <input type="range" min="0" max="5" step=".1" orient="vertical" v-model="highScaler" @change="onConfigChanged" /> <br />
+                    {{ highScaler }}
                 </div>
             </div>
             <div>
@@ -41,7 +34,10 @@
                                 Bass Cutoff
                             </td>
                             <td>
-                                <input type="range" min="0" max="100" step="1" orient="horizontal" v-model="bassCutoff" />
+                                <input type="range" min="0" max="100" step="1" orient="horizontal" v-model="bassCutoff" @change="onConfigChanged" />
+                            </td>
+                            <td>
+                                {{ bassCutoffFrequency }}
                             </td>
                         </tr>
                         <tr>
@@ -49,7 +45,10 @@
                                 Midrange Start
                             </td>
                             <td>
-                                <input type="range" min="0" max="100" step="1" orient="horizontal" v-model="midStart" />
+                                <input type="range" min="0" max="100" step="1" orient="horizontal" v-model="midStart" @change="onConfigChanged" />
+                            </td>
+                            <td>
+                                {{ midStartFrequency }}
                             </td>
                         </tr>
                         <tr>
@@ -57,11 +56,25 @@
                                 Treble Start
                             </td>
                             <td>
-                                <input type="range" min="0" max="100" step="1" orient="horizontal" v-model="trebleStart" />
+                                <input type="range" min="0" max="100" step="1" orient="horizontal" v-model="trebleStart" @change="onConfigChanged" />
+                            </td>
+                            <td>
+                                {{ trebleStartFrequency }}
                             </td>
                         </tr>
                     </table>
                 </div>
+            </div>
+            <div>
+                Bus Index
+                <select v-model="selectedBusIndex">
+                    <option value="0">0</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                </select>
             </div>
             <div>
                 Device
@@ -76,6 +89,7 @@
             </div>
             <div>
                 <button v-on:click="restart()">Restart</button>
+                <button v-on:click="resetToDefaults()">Reset To Defaults</button>
             </div>
         </div>
     </div>
@@ -105,9 +119,12 @@ export default {
 
             await this.getState();
         },
+        async resetToDefaults() {
+            await api.resetToDefaults();
+            await this.getState();
+        },
         async getState() {
             const state = (await api.getState()).state;
-            console.log(state);
             this.microphoneOptions = state.recording_devices;
 
             this.selectedDevice = state.config.device;
@@ -125,7 +142,27 @@ export default {
             this.trebleStart = state.config.treble_start;
 
             this.haveInitialState = true;
+
+            this.dftInfo = state.dft_info;
+        },
+        indexToFrequency(index) {
+            var frequency = this.dftInfo.dft_frequencies[index];
+            var unit = 'Hz';
+            if (frequency >= 1000) {
+                frequency /= 1000;
+                unit = 'kHz';
+            }
+
+            return `${frequency.toFixed(2)}${unit}`;
+        },
+        onConfigChanged() {
+            this.restart();
         }
+    },
+    computed: {
+        bassCutoffFrequency() { return this.indexToFrequency(this.bassCutoff); },
+        midStartFrequency() { return this.indexToFrequency(this.midStart); },
+        trebleStartFrequency() { return this.indexToFrequency(this.trebleStart); }
     },
     mounted: async function() {
         await this.getState();
@@ -140,6 +177,9 @@ export default {
             lowScaler: -1,
             midScaler: -1,
             highScaler: -1,
+            bassCutoff: 0,
+            midStart: 0,
+            trebleStart: 0,
         };
     }
 }
@@ -154,6 +194,7 @@ export default {
 
 .equalizer > div {
     display: inline-block;
+    width: 2rem;
 }
 
 input[type=range][orient=vertical] {

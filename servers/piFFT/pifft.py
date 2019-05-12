@@ -74,8 +74,8 @@ def get_raw_fft(data, threshold):
 def post_process(power, low_scaler, mid_scaler, high_scaler, bass_cutoff, mid_start, treble_start):
     # Musical frequencies jump up exponentially with note value.
     # What we want to do is separate bass, midrange, and treble
-    # out into three different groups. The ranges we're allocating
-    # are approximately:
+    # out into three different groups. The default ranges we're
+    #  allocating are approximately:
     #
     # 1. 43-172Hz
     # 2. 215-1292Hz
@@ -133,6 +133,9 @@ def make_packet(matrix):
 
     return packet
 
+def get_dft_buckets():
+    return np.fft.fftfreq(CHUNK, 1.0/SAMPLE_RATE)[:512].tolist()
+
 def get_params():
     bus_index = 1 #2
     device = 'plughw:CARD=Microphone,DEV=0'
@@ -148,6 +151,7 @@ def get_params():
 
     parser = argparse.ArgumentParser(description='FFT transmistter')
     parser.add_argument("--print-defaults", dest="print_defaults", action="store_true", help="print out default values")
+    parser.add_argument("--print-dft-info", dest="print_dft_info", action="store_true", help="print out default values")
     parser.add_argument('--bus-index', action='store', dest='bus_index', type=int)
     parser.add_argument('--device', action='store', dest='device')
 
@@ -180,6 +184,12 @@ def get_params():
 
         sys.exit()
 
+    if ns.print_dft_info:
+        print(json.dumps({
+            'dft_frequencies': get_dft_buckets(),
+        }))
+
+        sys.exit()
 
     if ns.bus_index:
         bus_index = ns.bus_index

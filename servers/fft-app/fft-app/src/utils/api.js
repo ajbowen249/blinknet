@@ -6,6 +6,10 @@ export async function restart(config) {
     return await axios.default.post(`${C_BaseApi}/restart`, { config });
 }
 
+export async function resetToDefaults() {
+    return await axios.default.post(`${C_BaseApi}/reset`);
+}
+
 export async function getState() {
     const response = await axios.default.get(`${C_BaseApi}/state`);
     return response.data;
