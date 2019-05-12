@@ -7,22 +7,22 @@
             <div class="equalizer">
                 <div>
                     T <br />
-                    <input type="range" min="0" max="10" step=".1" orient="vertical" v-model="threshold" @change="onConfigChanged" /> <br />
+                    <input type="range" min="0" max="10" step=".1" orient="vertical" v-model.number="threshold" @change="onConfigChanged" /> <br />
                     {{ threshold }}
                 </div>
                 <div>
                     L <br />
-                    <input type="range" min="0" max="5" step=".1" orient="vertical" v-model="lowScaler" @change="onConfigChanged" /> <br />
+                    <input type="range" min="0" max="5" step=".1" orient="vertical" v-model.number="lowScaler" @change="onConfigChanged" /> <br />
                     {{ lowScaler }}
                 </div>
                 <div>
                     M <br />
-                    <input type="range" min="0" max="5" step=".1" orient="vertical" v-model="midScaler" @change="onConfigChanged" /> <br />
+                    <input type="range" min="0" max="5" step=".1" orient="vertical" v-model.number="midScaler" @change="onConfigChanged" /> <br />
                     {{ midScaler }}
                 </div>
                 <div>
                     H <br />
-                    <input type="range" min="0" max="5" step=".1" orient="vertical" v-model="highScaler" @change="onConfigChanged" /> <br />
+                    <input type="range" min="0" max="5" step=".1" orient="vertical" v-model.number="highScaler" @change="onConfigChanged" /> <br />
                     {{ highScaler }}
                 </div>
             </div>
@@ -34,7 +34,7 @@
                                 Bass Cutoff
                             </td>
                             <td>
-                                <input type="range" min="0" max="100" step="1" orient="horizontal" v-model="bassCutoff" @change="onConfigChanged" />
+                                <input type="range" min="0" max="100" step="1" orient="horizontal" v-model.number="bassCutoff" @change="onConfigChanged" />
                             </td>
                             <td>
                                 {{ bassCutoffFrequency }} ({{ bassCutoff }})
@@ -45,7 +45,7 @@
                                 Midrange Start
                             </td>
                             <td>
-                                <input type="range" min="0" max="100" step="1" orient="horizontal" v-model="midStart" @change="onConfigChanged" />
+                                <input type="range" min="0" max="100" step="1" orient="horizontal" v-model.number="midStart" @change="onConfigChanged" />
                             </td>
                             <td>
                                 {{ midStartFrequency }} ({{ midStart }})
@@ -56,7 +56,7 @@
                                 Treble Start
                             </td>
                             <td>
-                                <input type="range" min="0" max="100" step="1" orient="horizontal" v-model="trebleStart" @change="onConfigChanged" />
+                                <input type="range" min="0" max="100" step="1" orient="horizontal" v-model.number="trebleStart" @change="onConfigChanged" />
                             </td>
                             <td>
                                 {{ trebleStartFrequency }} ({{ trebleStart }})
@@ -160,9 +160,35 @@ export default {
         }
     },
     computed: {
-        bassCutoffFrequency() { return this.indexToFrequency(this.bassCutoff); },
-        midStartFrequency() { return this.indexToFrequency(this.midStart); },
-        trebleStartFrequency() { return this.indexToFrequency(this.trebleStart); }
+        bassCutoffFrequency() {
+            // HACK ALERT!
+            // This was an easy place to make sure we could update sliders
+            // that wouldn't trigger a restart...never do this in "real"
+            // code.
+
+            if (this.bassCutoff >= this.midStart) {
+                // eslint-disable-next-line
+                this.midStart = this.bassCutoff + 1;
+            }
+
+            return this.indexToFrequency(this.bassCutoff);
+        },
+        midStartFrequency() {
+            if (this.midStart >= this.trebleStart) {
+                // eslint-disable-next-line
+                this.trebleStart = this.midStart + 1;
+            }
+
+            return this.indexToFrequency(this.midStart);
+        },
+        trebleStartFrequency() {
+            if (this.trebleStart <= this.midStart) {
+                // eslint-disable-next-line
+                this.midStart = this.trebleStart - 1;
+            }
+
+            return this.indexToFrequency(this.trebleStart);
+        }
     },
     mounted: async function() {
         await this.getState();
