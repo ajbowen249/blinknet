@@ -46,10 +46,16 @@ function restart(newConfig) {
         pyFFTPath,
         '--bus-index', config.bus_index,
         '--device', config.device,
+
         '--threshold', config.threshold,
+
         '--low-scaler', config.low_scaler,
         '--mid-scaler', config.mid_scaler,
         '--high-scaler', config.high_scaler,
+
+        '--bass-cutoff', config.bass_cutoff,
+        '--mid-start', config.mid_start,
+        '--treble-start', config.treble_start,
     ]);
 }
 
