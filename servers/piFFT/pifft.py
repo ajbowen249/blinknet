@@ -21,9 +21,9 @@ from struct import unpack
 from time import sleep
 
 MULTICAST_GROUP = ('224.3.29.71', 4210)
-SAMPLE_RATE = 14400 #44100
+SAMPLE_RATE = 44100
 CHANNELS = 1
-CHUNK = 256 #512
+CHUNK = 1024
 NUM_LIGHTS = 3
 
 SATURATION = 1
@@ -54,6 +54,8 @@ def get_raw_fft(data, threshold):
 
     # Apply FFT - real data so rfft used
     fourier = np.fft.rfft(data)
+    # print(np.fft.fftfreq(len(data), 1.0/SAMPLE_RATE)[:512])
+    # exit(0)
 
     # Remove last element in array to make it the same size as chunk
     fourier = np.delete(fourier, len(fourier) - 1)
@@ -61,40 +63,40 @@ def get_raw_fft(data, threshold):
     # Find amplitude
     power = np.log10(np.abs(fourier))
 
-    # Reshape the array to the number of bins we want
-    power = np.reshape(power,(FFT_BINS, len(power) / FFT_BINS))
-
-    # Collapse the 2-D array to 1-D by averaging columns
-    matrix = np.average(power, axis=1)
-
-    matrix[matrix < threshold] = 0
-    max = np.max(matrix)
+    # Cut off at threshold and normalize 0-1
+    power[power < threshold] = 0
+    max = np.max(power)
     max = threshold if max < threshold else max
-    matrix = np.interp(matrix, (threshold, max), (0.01, 1.0))
+    power = np.interp(power, (threshold, max), (0.01, 1.0))
 
-    return matrix
+    return power
 
-def post_process(matrix, low_scaler, mid_scaler, high_scaler):
-    # 64->54->3
-    matrix = np.delete(matrix, 0)
-    matrix = np.delete(matrix, 0)
-    matrix = np.delete(matrix, 0)
-    matrix = np.delete(matrix, 0)
-    matrix = np.delete(matrix, 0)
-    matrix = np.delete(matrix, 0)
-    matrix = np.delete(matrix, 0)
-    matrix = np.delete(matrix, 0)
-    matrix = np.delete(matrix, 0)
-    matrix = np.delete(matrix, 0)
+def post_process(power, low_scaler, mid_scaler, high_scaler, bass_cutoff, mid_start, treble_start):
+    # Musical frequencies jump up exponentially with note value.
+    # What we want to do is separate bass, midrange, and treble
+    # out into three different groups. The ranges we're allocating
+    # are approximately:
+    #
+    # 1. 43-172Hz
+    # 2. 215-1292Hz
+    # 3. 1378-21964Hz
+    # This is based on the allocated rfft bins for a 1024-point sample
+    # at a 44100Hz sample rate. Those choices line up as close as we
+    # can get to the base, midrange, and treble frequencies as defined
+    # by this chart:
+    # http://www.troelsgravesen.dk/frequency_ranges_files/frequency-bands.jpg
 
-    matrix = np.reshape(matrix,(3, 18))
-    matrix = np.average(matrix, axis=1)
+    all_bass = power[bass_cutoff:mid_start]
+    all_mid = power[mid_start:treble_start]
+    all_treble = power[treble_start:]
 
-    matrix[0] *= low_scaler
-    matrix[1] *= mid_scaler
-    matrix[2] *= high_scaler
+    bass = min(1.0, np.max(all_bass) * low_scaler)
+    mid = min(1.0, np.max(all_mid) * mid_scaler)
+    treble = min(1.0, np.max(all_treble) * high_scaler)
 
-    return matrix
+    levels = np.array([bass, mid, treble])
+
+    return levels
 
 def make_packet(matrix):
     packet = [
@@ -104,9 +106,9 @@ def make_packet(matrix):
         0, # reserved
     ]
 
-    light_1 = colorsys.hsv_to_rgb(matrix[0], SATURATION, min(1.0, matrix[0] * 2))
-    light_2 = colorsys.hsv_to_rgb(matrix[1], SATURATION, min(1.0, matrix[1] * 2))
-    light_3 = colorsys.hsv_to_rgb(matrix[2], SATURATION, min(1.0, matrix[2] * 2))
+    light_1 = colorsys.hsv_to_rgb(matrix[0], SATURATION, matrix[0])
+    light_2 = colorsys.hsv_to_rgb(matrix[1], SATURATION, matrix[1])
+    light_3 = colorsys.hsv_to_rgb(matrix[2], SATURATION, matrix[2])
 
     packet += [
         int(light_1[0] * 255),
@@ -135,30 +137,45 @@ def get_params():
     bus_index = 1 #2
     device = 'plughw:CARD=Microphone,DEV=0'
     threshold = 2.5
+
     low_scaler = 1
     mid_scaler = 1
     high_scaler = 1
 
-    # suggested new defaults: l - 0.4 m - 1, h - 1.9
+    bass_cutoff = 3
+    mid_start = 10
+    treble_start = 30
 
     parser = argparse.ArgumentParser(description='FFT transmistter')
     parser.add_argument("--print-defaults", dest="print_defaults", action="store_true", help="print out default values")
     parser.add_argument('--bus-index', action='store', dest='bus_index', type=int)
     parser.add_argument('--device', action='store', dest='device')
+
     parser.add_argument('--threshold', action='store', dest='threshold', type=float)
+
     parser.add_argument('--low-scaler', action='store', dest='low_scaler', type=float)
     parser.add_argument('--mid-scaler', action='store', dest='mid_scaler', type=float)
     parser.add_argument('--high-scaler', action='store', dest='high_scaler', type=float)
+
+    parser.add_argument('--bass-cutoff', action='store', dest='bass_cutoff', type=int)
+    parser.add_argument('--mid-start', action='store', dest='mid_start', type=int)
+    parser.add_argument('--treble-start', action='store', dest='treble_start', type=int)
 
     ns = parser.parse_args(sys.argv[1:])
     if ns.print_defaults:
         print(json.dumps({
             'bus_index': bus_index,
             'device': device,
+
             'threshold': threshold,
+
             'low_scaler': low_scaler,
             'mid_scaler': mid_scaler,
             'high_scaler': high_scaler,
+
+            'bass_cutoff': bass_cutoff,
+            'mid_start': mid_start,
+            'treble_start': treble_start,
         }))
 
         sys.exit()
@@ -182,11 +199,20 @@ def get_params():
     if ns.high_scaler:
         high_scaler = ns.high_scaler
 
-    return (bus_index, device, threshold, low_scaler, mid_scaler, high_scaler)
+    if ns.bass_cutoff:
+        bass_cutoff = ns.bass_cutoff
+
+    if ns.mid_start:
+        mid_start = ns.mid_start
+
+    if ns.treble_start:
+        treble_start = ns.treble_start
+
+    return (bus_index, device, threshold, low_scaler, mid_scaler, high_scaler, bass_cutoff, mid_start, treble_start)
 
 
 def main():
-    (bus_index, device, threshold, low_scaler, mid_scaler, high_scaler) = get_params()
+    (bus_index, device, threshold, low_scaler, mid_scaler, high_scaler, bass_cutoff, mid_start, treble_start) = get_params()
 
     print('initializing...')
     sock, bus, data_in = init(bus_index, device)
@@ -198,8 +224,8 @@ def main():
         data_in.pause(1)
         if l:
             try:
-                matrix = get_raw_fft(data, threshold)
-                matrix = post_process(matrix, low_scaler, mid_scaler, high_scaler)
+                power = get_raw_fft(data, threshold)
+                matrix = post_process(power, low_scaler, mid_scaler, high_scaler, bass_cutoff, mid_start, treble_start)
                 sock.sendto(array.array('B', make_packet(matrix)).tostring(), MULTICAST_GROUP)
 
             except audioop.error, e:
