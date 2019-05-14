@@ -63,10 +63,11 @@ function restart(newConfig) {
         '--device', config.device,
 
         '--threshold', config.threshold,
+        '--maximum', config.maximum,
 
-        '--low-scaler', config.low_scaler,
-        '--mid-scaler', config.mid_scaler,
-        '--high-scaler', config.high_scaler,
+        '--low-gain', config.bass_gain,
+        '--mid-gain', config.mid_gain,
+        '--high-gain', config.treble_gain,
 
         '--bass-cutoff', config.bass_cutoff,
         '--mid-start', config.mid_start,

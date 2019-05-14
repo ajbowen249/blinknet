@@ -6,24 +6,30 @@
         <div v-else class="main-controls">
             <div class="equalizer">
                 <div>
-                    T <br />
+                    Threshold <br />
                     <input type="range" min="0" max="10" step=".1" orient="vertical" v-model.number="threshold" @change="onConfigChanged" /> <br />
                     {{ threshold }}
                 </div>
                 <div>
-                    L <br />
-                    <input type="range" min="0" max="5" step=".1" orient="vertical" v-model.number="lowScaler" @change="onConfigChanged" /> <br />
-                    {{ lowScaler }}
+                    Max <br />
+                    <input type="range" min="0" max="10" step=".1" orient="vertical" v-model.number="maximum" @change="onConfigChanged" /> <br />
+                    {{ maximum }}
+                </div>
+                <div><!-- Spacer --></div>
+                <div>
+                    Bass Gain <br />
+                    <input type="range" min="0" max="5" step=".1" orient="vertical" v-model.number="bassGain" @change="onConfigChanged" /> <br />
+                    {{ bassGain }}
                 </div>
                 <div>
-                    M <br />
-                    <input type="range" min="0" max="5" step=".1" orient="vertical" v-model.number="midScaler" @change="onConfigChanged" /> <br />
-                    {{ midScaler }}
+                    Mid Gain <br />
+                    <input type="range" min="0" max="5" step=".1" orient="vertical" v-model.number="midGain" @change="onConfigChanged" /> <br />
+                    {{ midGain }}
                 </div>
                 <div>
-                    H <br />
-                    <input type="range" min="0" max="5" step=".1" orient="vertical" v-model.number="highScaler" @change="onConfigChanged" /> <br />
-                    {{ highScaler }}
+                    Treble Gain <br />
+                    <input type="range" min="0" max="5" step=".1" orient="vertical" v-model.number="trebleGain" @change="onConfigChanged" /> <br />
+                    {{ trebleGain }}
                 </div>
             </div>
             <div>
@@ -107,10 +113,11 @@ export default {
                 device: this.selectedDevice,
 
                 threshold: this.threshold,
+                maximum: this.maximum,
 
-                low_scaler: this.lowScaler,
-                mid_scaler: this.midScaler,
-                high_scaler: this.highScaler,
+                bass_gain: this.bassGain,
+                mid_gain: this.midGain,
+                treble_gain: this.trebleGain,
 
                 bass_cutoff: this.bassCutoff,
                 mid_start: this.midStart,
@@ -131,10 +138,11 @@ export default {
             this.selectedBusIndex = state.config.bus_index;
 
             this.threshold = state.config.threshold;
+            this.maximum = state.config.maximum;
 
-            this.lowScaler = state.config.low_scaler;
-            this.midScaler = state.config.mid_scaler;
-            this.highScaler = state.config.high_scaler;
+            this.bassGain = state.config.bass_gain;
+            this.midGain = state.config.mid_gain;
+            this.trebleGain = state.config.treble_gain;
 
 
             this.bassCutoff = state.config.bass_cutoff;
@@ -200,9 +208,10 @@ export default {
             microphoneOptions: [],
             selectedBusIndex: -1,
             threshold: -1,
-            lowScaler: -1,
-            midScaler: -1,
-            highScaler: -1,
+            maximum: -1,
+            bassGain: -1,
+            midGain: -1,
+            trebleGain: -1,
             bassCutoff: 0,
             midStart: 0,
             trebleStart: 0,
@@ -220,7 +229,7 @@ export default {
 
 .equalizer > div {
     display: inline-block;
-    width: 2rem;
+    width: 5rem;
 }
 
 input[type=range][orient=vertical] {

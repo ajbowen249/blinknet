@@ -47,7 +47,7 @@ def init(bus_index, device):
 
     return (sock, bus, data_in)
 
-def get_raw_fft(data, threshold):
+def get_raw_fft(data, threshold, maximum):
     # Convert raw data to numpy array
     data = unpack('%dh' % (len(data) / 2), data)
     data = np.array(data, dtype='h')
@@ -65,13 +65,13 @@ def get_raw_fft(data, threshold):
 
     # Cut off at threshold and normalize 0-1
     power[power < threshold] = 0
-    max = np.max(power)
-    max = threshold if max < threshold else max
-    power = np.interp(power, (threshold, max), (0.01, 1.0))
+    #max = np.max(power)
+    #max = threshold if max < threshold else max
+    power = np.interp(power, (threshold, maximum), (0.01, 1.0))
 
     return power
 
-def post_process(power, low_scaler, mid_scaler, high_scaler, bass_cutoff, mid_start, treble_start):
+def post_process(power, bass_gain, mid_gain, treble_gain, bass_cutoff, mid_start, treble_start):
     # Musical frequencies jump up exponentially with note value.
     # What we want to do is separate bass, midrange, and treble
     # out into three different groups. The default ranges we're
@@ -90,9 +90,9 @@ def post_process(power, low_scaler, mid_scaler, high_scaler, bass_cutoff, mid_st
     all_mid = power[mid_start:treble_start]
     all_treble = power[treble_start:]
 
-    bass = min(1.0, np.max(all_bass) * low_scaler)
-    mid = min(1.0, np.max(all_mid) * mid_scaler)
-    treble = min(1.0, np.max(all_treble) * high_scaler)
+    bass = min(1.0, np.max(all_bass) * bass_gain)
+    mid = min(1.0, np.max(all_mid) * mid_gain)
+    treble = min(1.0, np.max(all_treble) * treble_gain)
 
     levels = np.array([bass, mid, treble])
 
@@ -139,14 +139,15 @@ def get_dft_buckets():
 def get_params():
     bus_index = 1 #2
     device = 'plughw:CARD=Microphone,DEV=0'
-    threshold = 2.5
+    threshold = 5
+    maximum = 7
 
-    low_scaler = 1
-    mid_scaler = 1
-    high_scaler = 1
+    bass_gain = 1
+    mid_gain = 1
+    treble_gain = 1
 
-    bass_cutoff = 3
-    mid_start = 10
+    bass_cutoff = 8
+    mid_start = 13
     treble_start = 30
 
     parser = argparse.ArgumentParser(description='FFT transmistter')
@@ -156,10 +157,11 @@ def get_params():
     parser.add_argument('--device', action='store', dest='device')
 
     parser.add_argument('--threshold', action='store', dest='threshold', type=float)
+    parser.add_argument('--maximum', action='store', dest='maximum', type=float)
 
-    parser.add_argument('--low-scaler', action='store', dest='low_scaler', type=float)
-    parser.add_argument('--mid-scaler', action='store', dest='mid_scaler', type=float)
-    parser.add_argument('--high-scaler', action='store', dest='high_scaler', type=float)
+    parser.add_argument('--low-gain', action='store', dest='bass_gain', type=float)
+    parser.add_argument('--mid-gain', action='store', dest='mid_gain', type=float)
+    parser.add_argument('--high-gain', action='store', dest='treble_gain', type=float)
 
     parser.add_argument('--bass-cutoff', action='store', dest='bass_cutoff', type=int)
     parser.add_argument('--mid-start', action='store', dest='mid_start', type=int)
@@ -172,10 +174,11 @@ def get_params():
             'device': device,
 
             'threshold': threshold,
+            'maximum': maximum,
 
-            'low_scaler': low_scaler,
-            'mid_scaler': mid_scaler,
-            'high_scaler': high_scaler,
+            'bass_gain': bass_gain,
+            'mid_gain': mid_gain,
+            'treble_gain': treble_gain,
 
             'bass_cutoff': bass_cutoff,
             'mid_start': mid_start,
@@ -200,14 +203,17 @@ def get_params():
     if ns.threshold:
         threshold = ns.threshold
 
-    if ns.low_scaler:
-        low_scaler = ns.low_scaler
+    if ns.maximum:
+        maximum = ns.maximum
 
-    if ns.mid_scaler:
-        mid_scaler = ns.mid_scaler
+    if ns.bass_gain:
+        bass_gain = ns.bass_gain
 
-    if ns.high_scaler:
-        high_scaler = ns.high_scaler
+    if ns.mid_gain:
+        mid_gain = ns.mid_gain
+
+    if ns.treble_gain:
+        treble_gain = ns.treble_gain
 
     if ns.bass_cutoff:
         bass_cutoff = ns.bass_cutoff
@@ -218,11 +224,11 @@ def get_params():
     if ns.treble_start:
         treble_start = ns.treble_start
 
-    return (bus_index, device, threshold, low_scaler, mid_scaler, high_scaler, bass_cutoff, mid_start, treble_start)
+    return (bus_index, device, threshold, maximum, bass_gain, mid_gain, treble_gain, bass_cutoff, mid_start, treble_start)
 
 
 def main():
-    (bus_index, device, threshold, low_scaler, mid_scaler, high_scaler, bass_cutoff, mid_start, treble_start) = get_params()
+    (bus_index, device, threshold, maximum, bass_gain, mid_gain, treble_gain, bass_cutoff, mid_start, treble_start) = get_params()
 
     print('initializing...')
     sock, bus, data_in = init(bus_index, device)
@@ -234,8 +240,8 @@ def main():
         data_in.pause(1)
         if l:
             try:
-                power = get_raw_fft(data, threshold)
-                matrix = post_process(power, low_scaler, mid_scaler, high_scaler, bass_cutoff, mid_start, treble_start)
+                power = get_raw_fft(data, threshold, maximum)
+                matrix = post_process(power, bass_gain, mid_gain, treble_gain, bass_cutoff, mid_start, treble_start)
                 sock.sendto(array.array('B', make_packet(matrix)).tostring(), MULTICAST_GROUP)
 
             except audioop.error, e:
