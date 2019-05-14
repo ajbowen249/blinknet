@@ -65,6 +65,7 @@ function restart(newConfig) {
         '--threshold', config.threshold,
         '--maximum', config.maximum,
 
+        '--master-gain', config.master_gain,
         '--low-gain', config.bass_gain,
         '--mid-gain', config.mid_gain,
         '--high-gain', config.treble_gain,

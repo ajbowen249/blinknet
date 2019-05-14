@@ -17,18 +17,23 @@
                 </div>
                 <div><!-- Spacer --></div>
                 <div>
-                    Bass Gain <br />
-                    <input type="range" min="0" max="5" step=".1" orient="vertical" v-model.number="bassGain" @change="onConfigChanged" /> <br />
+                    Master<br /> Gain <br />
+                    <input type="range" :min="gainMin" :max="gainMax" :step="gainStep" orient="vertical" v-model.number="masterGain" @change="onConfigChanged" /> <br />
+                    {{ masterGain }}
+                </div>
+                <div>
+                    Bass<br /> Gain <br />
+                    <input type="range" :min="gainMin" :max="gainMax" :step="gainStep" orient="vertical" v-model.number="bassGain" @change="onConfigChanged" /> <br />
                     {{ bassGain }}
                 </div>
                 <div>
-                    Mid Gain <br />
-                    <input type="range" min="0" max="5" step=".1" orient="vertical" v-model.number="midGain" @change="onConfigChanged" /> <br />
+                    Mid<br /> Gain <br />
+                    <input type="range" :min="gainMin" :max="gainMax" :step="gainStep" orient="vertical" v-model.number="midGain" @change="onConfigChanged" /> <br />
                     {{ midGain }}
                 </div>
                 <div>
-                    Treble Gain <br />
-                    <input type="range" min="0" max="5" step=".1" orient="vertical" v-model.number="trebleGain" @change="onConfigChanged" /> <br />
+                    Treble<br /> Gain <br />
+                    <input type="range" :min="gainMin" :max="gainMax" :step="gainStep" orient="vertical" v-model.number="trebleGain" @change="onConfigChanged" /> <br />
                     {{ trebleGain }}
                 </div>
             </div>
@@ -115,6 +120,7 @@ export default {
                 threshold: this.threshold,
                 maximum: this.maximum,
 
+                master_gain: this.masterGain,
                 bass_gain: this.bassGain,
                 mid_gain: this.midGain,
                 treble_gain: this.trebleGain,
@@ -140,10 +146,10 @@ export default {
             this.threshold = state.config.threshold;
             this.maximum = state.config.maximum;
 
+            this.masterGain = state.config.master_gain;
             this.bassGain = state.config.bass_gain;
             this.midGain = state.config.mid_gain;
             this.trebleGain = state.config.treble_gain;
-
 
             this.bassCutoff = state.config.bass_cutoff;
             this.midStart = state.config.mid_start;
@@ -209,13 +215,28 @@ export default {
             selectedBusIndex: -1,
             threshold: -1,
             maximum: -1,
+            masterGain: -1,
             bassGain: -1,
             midGain: -1,
             trebleGain: -1,
             bassCutoff: 0,
             midStart: 0,
             trebleStart: 0,
+
+            gainMin: 0,
+            gainMax: 2,
+            gainStep: .01,
         };
+    },
+    metaInfo: {
+        title: 'BlinkNet Control Panel',
+        titleTemplate: '%s',
+        meta: [
+            {
+                name: 'viewport',
+                content: 'width=device-width, initial-scale=1',
+            },
+        ]
     }
 }
 </script>

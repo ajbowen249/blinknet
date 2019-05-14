@@ -47,21 +47,22 @@ def init(bus_index, device):
 
     return (sock, bus, data_in)
 
-def get_raw_fft(data, threshold, maximum):
+def get_raw_fft(data, master_gain, threshold, maximum):
     # Convert raw data to numpy array
     data = unpack('%dh' % (len(data) / 2), data)
     data = np.array(data, dtype='h')
 
     # Apply FFT - real data so rfft used
     fourier = np.fft.rfft(data)
-    # print(np.fft.fftfreq(len(data), 1.0/SAMPLE_RATE)[:512])
-    # exit(0)
 
     # Remove last element in array to make it the same size as chunk
     fourier = np.delete(fourier, len(fourier) - 1)
 
     # Find amplitude
     power = np.log10(np.abs(fourier))
+
+    # Apply master gain
+    power = power * master_gain
 
     # Cut off at threshold and normalize 0-1
     power[power < threshold] = 0
@@ -142,6 +143,7 @@ def get_params():
     threshold = 5
     maximum = 7
 
+    master_gain = 1
     bass_gain = 1
     mid_gain = 1
     treble_gain = 1
@@ -159,6 +161,7 @@ def get_params():
     parser.add_argument('--threshold', action='store', dest='threshold', type=float)
     parser.add_argument('--maximum', action='store', dest='maximum', type=float)
 
+    parser.add_argument('--master-gain', action='store', dest='master_gain', type=float)
     parser.add_argument('--low-gain', action='store', dest='bass_gain', type=float)
     parser.add_argument('--mid-gain', action='store', dest='mid_gain', type=float)
     parser.add_argument('--high-gain', action='store', dest='treble_gain', type=float)
@@ -176,6 +179,7 @@ def get_params():
             'threshold': threshold,
             'maximum': maximum,
 
+            'master_gain': master_gain,
             'bass_gain': bass_gain,
             'mid_gain': mid_gain,
             'treble_gain': treble_gain,
@@ -206,6 +210,9 @@ def get_params():
     if ns.maximum:
         maximum = ns.maximum
 
+    if ns.master_gain:
+        master_gain = ns.master_gain
+
     if ns.bass_gain:
         bass_gain = ns.bass_gain
 
@@ -224,11 +231,11 @@ def get_params():
     if ns.treble_start:
         treble_start = ns.treble_start
 
-    return (bus_index, device, threshold, maximum, bass_gain, mid_gain, treble_gain, bass_cutoff, mid_start, treble_start)
+    return (bus_index, device, threshold, maximum, master_gain, bass_gain, mid_gain, treble_gain, bass_cutoff, mid_start, treble_start)
 
 
 def main():
-    (bus_index, device, threshold, maximum, bass_gain, mid_gain, treble_gain, bass_cutoff, mid_start, treble_start) = get_params()
+    (bus_index, device, threshold, maximum, master_gain, bass_gain, mid_gain, treble_gain, bass_cutoff, mid_start, treble_start) = get_params()
 
     print('initializing...')
     sock, bus, data_in = init(bus_index, device)
@@ -240,7 +247,7 @@ def main():
         data_in.pause(1)
         if l:
             try:
-                power = get_raw_fft(data, threshold, maximum)
+                power = get_raw_fft(data, master_gain, threshold, maximum)
                 matrix = post_process(power, bass_gain, mid_gain, treble_gain, bass_cutoff, mid_start, treble_start)
                 sock.sendto(array.array('B', make_packet(matrix)).tostring(), MULTICAST_GROUP)
 
