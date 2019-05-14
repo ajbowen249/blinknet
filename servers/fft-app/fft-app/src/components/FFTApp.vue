@@ -77,8 +77,10 @@
                 </div>
             </div>
             <div>
+                <input type="checkbox" id="shouldLockhardware" v-model="lockHardware">
+                <label for="shouldLockhardware">Lock Hardware&nbsp;&nbsp;&nbsp;&nbsp;</label>
                 Bus Index
-                <select v-model="selectedBusIndex">
+                <select v-model="selectedBusIndex" :disabled="lockHardware">
                     <option value="0">0</option>
                     <option value="1">1</option>
                     <option value="2">2</option>
@@ -89,7 +91,7 @@
             </div>
             <div>
                 Device
-                <select v-model="selectedDevice">
+                <select v-model="selectedDevice" :disabled="lockHardware">
                     <option v-for="microphone in microphoneOptions"
                             v-bind:key="microphone.name"
                             v-bind:value="microphone.name">
@@ -210,9 +212,12 @@ export default {
     data() {
         return {
             haveInitialState: false,
+
+            lockHardware: true,
             selectedDevice: '',
             microphoneOptions: [],
             selectedBusIndex: -1,
+
             threshold: -1,
             maximum: -1,
             masterGain: -1,
@@ -257,7 +262,7 @@ input[type=range][orient=vertical] {
     writing-mode: bt-lr; /* IE */
     -webkit-appearance: slider-vertical; /* WebKit */
     width: 8px;
-    height: 175px;
+    height: 225px;
     padding: 0 5px;
 }
 
