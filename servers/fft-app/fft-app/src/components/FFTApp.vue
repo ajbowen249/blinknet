@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <div class="main">
         <div v-if="!haveInitialState">
             Connecting...
         </div>
@@ -7,33 +7,35 @@
             <div class="equalizer">
                 <div>
                     Threshold <br />
-                    <input type="range" min="0" max="10" step=".1" orient="vertical" v-model.number="threshold" @change="onConfigChanged" /> <br />
+                    <vue-slider class="vertical-slider" v-model.number="threshold" v-bind="thresholdSliderOptions" @change="onConfigChanged" /> <br />
                     {{ threshold }}
                 </div>
                 <div>
                     Max <br />
-                    <input type="range" min="0" max="10" step=".1" orient="vertical" v-model.number="maximum" @change="onConfigChanged" /> <br />
+                    <vue-slider class="vertical-slider" v-model.number="maximum" v-bind="thresholdSliderOptions" @change="onConfigChanged" /> <br />
                     {{ maximum }}
                 </div>
-                <div><!-- Spacer --></div>
+                <div class="middle-buttons">
+                    
+                </div>
                 <div>
-                    Master<br /> Gain <br />
-                    <input type="range" :min="gainMin" :max="gainMax" :step="gainStep" orient="vertical" v-model.number="masterGain" @change="onConfigChanged" /> <br />
+                    Master<br />
+                    <vue-slider class="vertical-slider" v-model.number="masterGain" v-bind="gainSliderOptions" @change="onConfigChanged" /> <br />
                     {{ masterGain }}
                 </div>
                 <div>
-                    Bass<br /> Gain <br />
-                    <input type="range" :min="gainMin" :max="gainMax" :step="gainStep" orient="vertical" v-model.number="bassGain" @change="onConfigChanged" /> <br />
+                    Bass<br />
+                    <vue-slider class="vertical-slider" v-model.number="bassGain" v-bind="gainSliderOptions" @change="onConfigChanged" /> <br />
                     {{ bassGain }}
                 </div>
                 <div>
-                    Mid<br /> Gain <br />
-                    <input type="range" :min="gainMin" :max="gainMax" :step="gainStep" orient="vertical" v-model.number="midGain" @change="onConfigChanged" /> <br />
+                    Mid<br />
+                    <vue-slider class="vertical-slider" v-model.number="midGain" v-bind="gainSliderOptions" @change="onConfigChanged" /> <br />
                     {{ midGain }}
                 </div>
                 <div>
-                    Treble<br /> Gain <br />
-                    <input type="range" :min="gainMin" :max="gainMax" :step="gainStep" orient="vertical" v-model.number="trebleGain" @change="onConfigChanged" /> <br />
+                    Treble<br />
+                    <vue-slider class="vertical-slider" v-model.number="trebleGain" v-bind="gainSliderOptions" @change="onConfigChanged" /> <br />
                     {{ trebleGain }}
                 </div>
             </div>
@@ -45,7 +47,7 @@
                                 Bass Cutoff
                             </td>
                             <td>
-                                <input type="range" min="0" max="100" step="1" orient="horizontal" v-model.number="bassCutoff" @change="onConfigChanged" />
+                                <vue-slider class="horizontal-slider" v-model.number="bassCutoff" v-bind="frequencySliderOptions" @change="onConfigChanged" />
                             </td>
                             <td>
                                 {{ bassCutoffFrequency }} ({{ bassCutoff }})
@@ -56,7 +58,7 @@
                                 Midrange Start
                             </td>
                             <td>
-                                <input type="range" min="0" max="100" step="1" orient="horizontal" v-model.number="midStart" @change="onConfigChanged" />
+                                <vue-slider class="horizontal-slider" v-model.number="midStart" v-bind="frequencySliderOptions" @change="onConfigChanged" />
                             </td>
                             <td>
                                 {{ midStartFrequency }} ({{ midStart }})
@@ -67,7 +69,7 @@
                                 Treble Start
                             </td>
                             <td>
-                                <input type="range" min="0" max="100" step="1" orient="horizontal" v-model.number="trebleStart" @change="onConfigChanged" />
+                                <vue-slider class="horizontal-slider" v-model.number="trebleStart" v-bind="frequencySliderOptions" @change="onConfigChanged" />
                             </td>
                             <td>
                                 {{ trebleStartFrequency }} ({{ trebleStart }})
@@ -77,10 +79,13 @@
                 </div>
             </div>
             <div>
+                <button v-on:click="enterFullscreen()">Fullscreen</button>
+                <button v-on:click="restart()">Restart</button>
+                <button v-on:click="resetToDefaults()">Reset To Defaults</button>
                 <input type="checkbox" id="shouldLockhardware" v-model="lockHardware">
                 <label for="shouldLockhardware">Lock Hardware&nbsp;&nbsp;&nbsp;&nbsp;</label>
-                Bus Index
-                <select v-model="selectedBusIndex" :disabled="lockHardware">
+                <div :class="lockHardware ? 'hidden' : ''">Bus Index</div>
+                <select :class="lockHardware ? 'hidden' : ''" v-model="selectedBusIndex" :disabled="lockHardware">
                     <option value="0">0</option>
                     <option value="1">1</option>
                     <option value="2">2</option>
@@ -89,7 +94,7 @@
                     <option value="5">5</option>
                 </select>
             </div>
-            <div>
+            <div :class="lockHardware ? 'hidden' : ''">
                 Device
                 <select v-model="selectedDevice" :disabled="lockHardware">
                     <option v-for="microphone in microphoneOptions"
@@ -100,15 +105,14 @@
                     </option>
                 </select>
             </div>
-            <div>
-                <button v-on:click="restart()">Restart</button>
-                <button v-on:click="resetToDefaults()">Reset To Defaults</button>
-            </div>
         </div>
     </div>
 </template>
 
 <script>
+
+import VueSlider from 'vue-slider-component'
+import 'vue-slider-component/theme/default.css'
 
 import * as api from '../utils/api';
 
@@ -173,6 +177,19 @@ export default {
         },
         onConfigChanged() {
             this.restart();
+        },
+        enterFullscreen() {
+            var doc = window.document;
+            var docEl = doc.documentElement;
+
+            var requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
+            var cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
+
+            if(!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
+                requestFullScreen.call(docEl);
+            } else {
+                cancelFullScreen.call(doc);
+            }
         }
     },
     computed: {
@@ -210,6 +227,24 @@ export default {
         await this.getState();
     },
     data() {
+        const baseSlider = {
+            lazy: true,
+        };
+
+        const baseVerticalSlider = Object.assign({
+            height: 215,
+            width: 16,
+            direction: 'btt',
+            dotSize: 50,
+        }, baseSlider);
+
+        const baseHorizontalSlider = Object.assign({
+            height: 8,
+            width: 400,
+            direction: 'ltr',
+            dotSize: 20,
+        }, baseSlider);
+
         return {
             haveInitialState: false,
 
@@ -228,9 +263,23 @@ export default {
             midStart: 0,
             trebleStart: 0,
 
-            gainMin: 0,
-            gainMax: 2,
-            gainStep: .01,
+            thresholdSliderOptions: Object.assign({
+                min: 0,
+                max: 10,
+                interval: .1,
+            }, baseVerticalSlider),
+
+            gainSliderOptions: Object.assign({
+                min: 0,
+                max: 1.5,
+                interval: .01,
+            }, baseVerticalSlider),
+
+            frequencySliderOptions: Object.assign({
+                min: 0,
+                max: 100,
+                interval: 1,
+            }, baseHorizontalSlider),
         };
     },
     metaInfo: {
@@ -242,6 +291,9 @@ export default {
                 content: 'width=device-width, initial-scale=1',
             },
         ]
+    },
+    components: {
+        VueSlider
     }
 }
 </script>
@@ -249,8 +301,9 @@ export default {
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
 
-.main-controls > div {
-    margin-bottom: .5rem;
+.main {
+    margin: 0;
+    color: #ffffff;
 }
 
 .equalizer > div {
@@ -258,20 +311,24 @@ export default {
     width: 5rem;
 }
 
-input[type=range][orient=vertical] {
-    writing-mode: bt-lr; /* IE */
-    -webkit-appearance: slider-vertical; /* WebKit */
-    width: 8px;
-    height: 225px;
-    padding: 0 5px;
+.vertical-slider {
+    margin: 0 auto;
+}
+
+.horizontal-slider {
+    margin: auto 0;
 }
 
 .frequency-ranges > table {
     margin: 0 auto;
 }
 
-.frequency-ranges > table > tr > td > input[type=range] {
-    width: 30rem;
+.hidden {
+    display: none;
+}
+
+.middle-buttons > button {
+    margin-bottom: 10px;
 }
 
 </style>
