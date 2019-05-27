@@ -3,105 +3,107 @@
         <div v-if="!haveInitialState">
             Connecting...
         </div>
-        <div v-else class="main-controls">
-            <div class="equalizer">
-                <div>
-                    Threshold <br />
-                    <vue-slider class="vertical-slider" v-model.number="threshold" v-bind="thresholdSliderOptions" @change="onConfigChanged" /> <br />
-                    {{ threshold }}
+        <div v-else>
+            <div id="fft-controls">
+                <div class="equalizer">
+                    <div>
+                        Threshold <br />
+                        <vue-slider class="vertical-slider" v-model.number="threshold" v-bind="thresholdSliderOptions" @change="onConfigChanged" /> <br />
+                        {{ threshold }}
+                    </div>
+                    <div>
+                        Max <br />
+                        <vue-slider class="vertical-slider" v-model.number="maximum" v-bind="thresholdSliderOptions" @change="onConfigChanged" /> <br />
+                        {{ maximum }}
+                    </div>
+                    <div> <!-- spacer --> </div>
+                    <div>
+                        Master<br />
+                        <vue-slider class="vertical-slider" v-model.number="masterGain" v-bind="gainSliderOptions" @change="onConfigChanged" /> <br />
+                        {{ masterGain }}
+                    </div>
+                    <div>
+                        Bass<br />
+                        <vue-slider class="vertical-slider" v-model.number="bassGain" v-bind="gainSliderOptions" @change="onConfigChanged" /> <br />
+                        {{ bassGain }}
+                    </div>
+                    <div>
+                        Mid<br />
+                        <vue-slider class="vertical-slider" v-model.number="midGain" v-bind="gainSliderOptions" @change="onConfigChanged" /> <br />
+                        {{ midGain }}
+                    </div>
+                    <div>
+                        Treble<br />
+                        <vue-slider class="vertical-slider" v-model.number="trebleGain" v-bind="gainSliderOptions" @change="onConfigChanged" /> <br />
+                        {{ trebleGain }}
+                    </div>
                 </div>
                 <div>
-                    Max <br />
-                    <vue-slider class="vertical-slider" v-model.number="maximum" v-bind="thresholdSliderOptions" @change="onConfigChanged" /> <br />
-                    {{ maximum }}
+                    <div class="frequency-ranges">
+                        <table>
+                            <tr>
+                                <td>
+                                    Bass Cutoff
+                                </td>
+                                <td>
+                                    <vue-slider class="horizontal-slider" v-model.number="bassCutoff" v-bind="frequencySliderOptions" @change="onConfigChanged" />
+                                </td>
+                                <td>
+                                    {{ bassCutoffFrequency }} ({{ bassCutoff }})
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    Midrange Start
+                                </td>
+                                <td>
+                                    <vue-slider class="horizontal-slider" v-model.number="midStart" v-bind="frequencySliderOptions" @change="onConfigChanged" />
+                                </td>
+                                <td>
+                                    {{ midStartFrequency }} ({{ midStart }})
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    Treble Start
+                                </td>
+                                <td>
+                                    <vue-slider class="horizontal-slider" v-model.number="trebleStart" v-bind="frequencySliderOptions" @change="onConfigChanged" />
+                                </td>
+                                <td>
+                                    {{ trebleStartFrequency }} ({{ trebleStart }})
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
                 </div>
-                <div> <!-- spacer --> </div>
                 <div>
-                    Master<br />
-                    <vue-slider class="vertical-slider" v-model.number="masterGain" v-bind="gainSliderOptions" @change="onConfigChanged" /> <br />
-                    {{ masterGain }}
+                    <button v-on:click="fullscreenFFT()">Fullscreen</button>
+                    <button v-on:click="restart()">Restart</button>
+                    <button v-on:click="resetToDefaults()">Reset To Defaults</button>
+                    <input type="checkbox" id="shouldLockhardware" v-model="lockHardware">
+                    <label for="shouldLockhardware">Lock Hardware&nbsp;&nbsp;&nbsp;&nbsp;</label>
+                    <div :class="lockHardware ? 'hidden' : ''">Bus Index</div>
+                    <select :class="lockHardware ? 'hidden' : ''" v-model="selectedBusIndex" :disabled="lockHardware">
+                        <option value="0">0</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                    </select>
                 </div>
-                <div>
-                    Bass<br />
-                    <vue-slider class="vertical-slider" v-model.number="bassGain" v-bind="gainSliderOptions" @change="onConfigChanged" /> <br />
-                    {{ bassGain }}
+                <div :class="lockHardware ? 'hidden' : ''">
+                    Device
+                    <select v-model="selectedDevice" :disabled="lockHardware">
+                        <option v-for="microphone in microphoneOptions"
+                                v-bind:key="microphone.name"
+                                v-bind:value="microphone.name">
+                                {{ microphone.name }}
+                                ( {{ microphone.meta.join(' ') }} )
+                        </option>
+                    </select>
                 </div>
-                <div>
-                    Mid<br />
-                    <vue-slider class="vertical-slider" v-model.number="midGain" v-bind="gainSliderOptions" @change="onConfigChanged" /> <br />
-                    {{ midGain }}
-                </div>
-                <div>
-                    Treble<br />
-                    <vue-slider class="vertical-slider" v-model.number="trebleGain" v-bind="gainSliderOptions" @change="onConfigChanged" /> <br />
-                    {{ trebleGain }}
-                </div>
-            </div>
-            <div>
-                <div class="frequency-ranges">
-                    <table>
-                        <tr>
-                            <td>
-                                Bass Cutoff
-                            </td>
-                            <td>
-                                <vue-slider class="horizontal-slider" v-model.number="bassCutoff" v-bind="frequencySliderOptions" @change="onConfigChanged" />
-                            </td>
-                            <td>
-                                {{ bassCutoffFrequency }} ({{ bassCutoff }})
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                Midrange Start
-                            </td>
-                            <td>
-                                <vue-slider class="horizontal-slider" v-model.number="midStart" v-bind="frequencySliderOptions" @change="onConfigChanged" />
-                            </td>
-                            <td>
-                                {{ midStartFrequency }} ({{ midStart }})
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                Treble Start
-                            </td>
-                            <td>
-                                <vue-slider class="horizontal-slider" v-model.number="trebleStart" v-bind="frequencySliderOptions" @change="onConfigChanged" />
-                            </td>
-                            <td>
-                                {{ trebleStartFrequency }} ({{ trebleStart }})
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-            </div>
-            <div>
-                <button v-on:click="enterFullscreen()">Fullscreen</button>
-                <button v-on:click="restart()">Restart</button>
-                <button v-on:click="resetToDefaults()">Reset To Defaults</button>
-                <input type="checkbox" id="shouldLockhardware" v-model="lockHardware">
-                <label for="shouldLockhardware">Lock Hardware&nbsp;&nbsp;&nbsp;&nbsp;</label>
-                <div :class="lockHardware ? 'hidden' : ''">Bus Index</div>
-                <select :class="lockHardware ? 'hidden' : ''" v-model="selectedBusIndex" :disabled="lockHardware">
-                    <option value="0">0</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                    <option value="5">5</option>
-                </select>
-            </div>
-            <div :class="lockHardware ? 'hidden' : ''">
-                Device
-                <select v-model="selectedDevice" :disabled="lockHardware">
-                    <option v-for="microphone in microphoneOptions"
-                            v-bind:key="microphone.name"
-                            v-bind:value="microphone.name">
-                            {{ microphone.name }}
-                            ( {{ microphone.meta.join(' ') }} )
-                    </option>
-                </select>
             </div>
         </div>
     </div>
@@ -176,9 +178,9 @@ export default {
         onConfigChanged() {
             this.restart();
         },
-        enterFullscreen() {
+        fullscreenFFT() {
             var doc = window.document;
-            var docEl = doc.documentElement;
+            var docEl = doc.getElementById('fft-controls');
 
             var requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
             var cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
@@ -297,6 +299,11 @@ export default {
 </script>
 
 <style scoped>
+
+/* Needs to be set separately to support full-screen */
+#fft-controls {
+    background-color: #C0C0C0;
+}
 
 .main {
     margin: 0;
