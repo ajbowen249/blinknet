@@ -9,6 +9,12 @@ var defaultSettings = {};
 var config = {};
 var dftInfo = {};
 
+var defaultServerConfig = {
+    mode: 'fft',
+};
+
+var serverConfig = Object.assign({}, defaultServerConfig);
+
 const guiPath = path.join(__dirname, '../fft-app/dist');
 const pyFFTPath = path.join(__dirname, '../../piFFT/pifft.py');
 
@@ -50,30 +56,34 @@ function getDefaults(done) {
     });
 }
 
-function restart(newConfig) {
+function restart(newConfig, newServerConfig) {
     if (pythonProcess) {
         pythonProcess.kill();
+        pythonProcess = undefined;
     }
 
     config = Object.assign(config, newConfig);
+    serverConfig = Object.assign(serverConfig, newServerConfig);
 
-    pythonProcess = child_process.spawn('python2', [
-        pyFFTPath,
-        '--bus-index', config.bus_index,
-        '--device', config.device,
+    if (serverConfig.mode === 'fft') {
+        pythonProcess = child_process.spawn('python2', [
+            pyFFTPath,
+            '--bus-index', config.bus_index,
+            '--device', config.device,
 
-        '--threshold', config.threshold,
-        '--maximum', config.maximum,
+            '--threshold', config.threshold,
+            '--maximum', config.maximum,
 
-        '--master-gain', config.master_gain,
-        '--low-gain', config.bass_gain,
-        '--mid-gain', config.mid_gain,
-        '--high-gain', config.treble_gain,
+            '--master-gain', config.master_gain,
+            '--low-gain', config.bass_gain,
+            '--mid-gain', config.mid_gain,
+            '--high-gain', config.treble_gain,
 
-        '--bass-cutoff', config.bass_cutoff,
-        '--mid-start', config.mid_start,
-        '--treble-start', config.treble_start,
-    ]);
+            '--bass-cutoff', config.bass_cutoff,
+            '--mid-start', config.mid_start,
+            '--treble-start', config.treble_start,
+        ]);
+    }
 }
 
 var recordingDevices = [];
@@ -115,12 +125,12 @@ function checkRecordingDevice(deviceName) {
 app.use('/', express.static(guiPath));
 
 app.post('/api/restart', (req, res) => {
-    restart(req.body.config);
+    restart(req.body.config, req.body.server_config);
     res.send(true);
 });
 
 app.post('/api/reset', (req, res) => {
-    restart(defaultSettings);
+    restart(defaultSettings, defaultServerConfig);
     res.send(true);
 });
 
@@ -130,6 +140,7 @@ app.get('/api/state', async (req, res) => {
             recording_devices: recordingDevices,
             config: config,
             dft_info: dftInfo,
+            server_config: serverConfig,
         }
     }));
 });

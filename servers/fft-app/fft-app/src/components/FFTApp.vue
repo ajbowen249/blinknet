@@ -78,6 +78,7 @@
                     </div>
                 </div>
                 <div>
+                    <button v-on:click="toggleMode()">{{ modeToggleLabel }}</button>
                     <button v-on:click="fullscreenFFT()">Fullscreen</button>
                     <button v-on:click="restart()">Restart</button>
                     <button v-on:click="resetToDefaults()">Reset To Defaults</button>
@@ -134,7 +135,7 @@ export default {
                 bass_cutoff: this.bassCutoff,
                 mid_start: this.midStart,
                 treble_start: this.trebleStart,
-            });
+            }, this.serverConfig);
 
             await this.getState();
         },
@@ -164,6 +165,8 @@ export default {
             this.haveInitialState = true;
 
             this.dftInfo = state.dft_info;
+
+            this.serverConfig = state.server_config;
         },
         indexToFrequency(index) {
             var frequency = this.dftInfo.dft_frequencies[index];
@@ -190,6 +193,19 @@ export default {
             } else {
                 cancelFullScreen.call(doc);
             }
+        },
+        toggleMode() {
+            if (!this.serverConfig) {
+                return;
+            }
+
+            if (this.serverConfig.mode === 'fft') {
+                this.serverConfig.mode = 'fixed';
+            } else {
+                this.serverConfig.mode = 'fft';
+            }
+
+            this.restart();
         }
     },
     computed: {
@@ -221,6 +237,40 @@ export default {
             }
 
             return this.indexToFrequency(this.trebleStart);
+        },
+        isFFTMode() {
+            return this.serverConfig && this.serverConfig.mode === 'fft';
+        },
+        thresholdSliderOptions() {
+            return Object.assign({
+                min: 0,
+                max: 10,
+                interval: .1,
+                disabled: !this.isFFTMode,
+            }, this.baseVerticalSlider);
+        },
+        gainSliderOptions() {
+            return Object.assign({
+                min: 0,
+                max: 1.5,
+                interval: .01,
+                disabled: !this.isFFTMode,
+            }, this.baseVerticalSlider)
+        },
+        frequencySliderOptions() {
+            return Object.assign({
+                min: 0,
+                max: 100,
+                interval: 1,
+                disabled: !this.isFFTMode,
+            }, this.baseHorizontalSlider);
+        },
+        modeToggleLabel() {
+            if (!this.serverConfig) {
+                return '';
+            }
+
+            return this.serverConfig.mode === 'fft' ? 'Fixed Mode' : 'FFT Mode';
         }
     },
     mounted: async function() {
@@ -263,23 +313,10 @@ export default {
             midStart: 0,
             trebleStart: 0,
 
-            thresholdSliderOptions: Object.assign({
-                min: 0,
-                max: 10,
-                interval: .1,
-            }, baseVerticalSlider),
+            serverConfig: undefined,
 
-            gainSliderOptions: Object.assign({
-                min: 0,
-                max: 1.5,
-                interval: .01,
-            }, baseVerticalSlider),
-
-            frequencySliderOptions: Object.assign({
-                min: 0,
-                max: 100,
-                interval: 1,
-            }, baseHorizontalSlider),
+            baseVerticalSlider,
+            baseHorizontalSlider,
         };
     },
     metaInfo: {
