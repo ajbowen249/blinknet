@@ -15,9 +15,7 @@
                     <vue-slider class="vertical-slider" v-model.number="maximum" v-bind="thresholdSliderOptions" @change="onConfigChanged" /> <br />
                     {{ maximum }}
                 </div>
-                <div class="middle-buttons">
-                    
-                </div>
+                <div> <!-- spacer --> </div>
                 <div>
                     Master<br />
                     <vue-slider class="vertical-slider" v-model.number="masterGain" v-bind="gainSliderOptions" @change="onConfigChanged" /> <br />
@@ -324,10 +322,6 @@ export default {
 
 .hidden {
     display: none;
-}
-
-.middle-buttons > button {
-    margin-bottom: 10px;
 }
 
 button {
