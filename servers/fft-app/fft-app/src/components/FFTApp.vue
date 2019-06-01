@@ -106,14 +106,21 @@
                     </select>
                 </div>
             </div>
+            <div>
+                <div id="fixed-color-picker">
+                    <chrome-picker :value="chosenColor"></chrome-picker>
+                </div>
+            </div>
         </div>
     </div>
 </template>
 
 <script>
 
-import VueSlider from 'vue-slider-component'
-import 'vue-slider-component/theme/default.css'
+import VueSlider from 'vue-slider-component';
+import 'vue-slider-component/theme/default.css';
+
+import { Chrome } from 'vue-color';
 
 import * as api from '../utils/api';
 
@@ -317,6 +324,8 @@ export default {
 
             baseVerticalSlider,
             baseHorizontalSlider,
+
+            chosenColor: { r: 255, g: 255, b: 0 },
         };
     },
     metaInfo: {
@@ -330,7 +339,8 @@ export default {
         ]
     },
     components: {
-        VueSlider
+        VueSlider,
+        'chrome-picker': Chrome,
     }
 }
 </script>
@@ -374,6 +384,11 @@ button {
     border: 2px solid #2B98D6;
     border-radius: 4px;
     margin: 0 5px;
+}
+
+#fixed-color-picker {
+    margin: 20px auto;
+    width: 225px;
 }
 
 </style>
