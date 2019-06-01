@@ -108,7 +108,7 @@
             </div>
             <div>
                 <div id="fixed-color-picker">
-                    <chrome-picker :value="chosenColor"></chrome-picker>
+                    <chrome-picker v-model="chosenColor" @input="onChosenColorChanged"></chrome-picker>
                 </div>
             </div>
         </div>
@@ -213,6 +213,8 @@ export default {
             }
 
             this.restart();
+        },
+        onChosenColorChanged() {
         }
     },
     computed: {
@@ -325,7 +327,16 @@ export default {
             baseVerticalSlider,
             baseHorizontalSlider,
 
-            chosenColor: { r: 255, g: 255, b: 0 },
+            chosenColor: {
+                hsl: { h: 270, s: 0.5000000000000001,l: 0.6000000000000001, a: 1 },
+                hex: '#9966CC',
+                hex8: '#9966CCFF',
+                rgba: { r: 153, g: 102, b: 204, a: 1 },
+                hsv: { h: 270, s: 0.5, v: 0.8, a:1 },
+                oldHue: 270,
+                source: 'hex',
+                a: 1
+            },
         };
     },
     metaInfo: {
