@@ -108,7 +108,7 @@
             </div>
             <div>
                 <div id="fixed-color-picker">
-                    <chrome-picker v-model="chosenColor" @input="onChosenColorChanged"></chrome-picker>
+                    <chrome-picker :disableAlpha="true" :disableFields="true" v-model="chosenColor" @input="onChosenColorChanged"></chrome-picker>
                 </div>
             </div>
         </div>
@@ -126,7 +126,7 @@ import * as api from '../utils/api';
 
 export default {
     methods: {
-        async restart() {
+        async sendData() {
             await api.restart({
                 bus_index: this.selectedBusIndex,
                 device: this.selectedDevice,
@@ -142,8 +142,12 @@ export default {
                 bass_cutoff: this.bassCutoff,
                 mid_start: this.midStart,
                 treble_start: this.trebleStart,
-            }, this.serverConfig);
 
+                chosen_color: this.chosenColor.rgba,
+            }, this.serverConfig);
+        },
+        async restart() {
+            await this.sendData();
             await this.getState();
         },
         async resetToDefaults() {
@@ -215,6 +219,7 @@ export default {
             this.restart();
         },
         onChosenColorChanged() {
+            this.sendData();
         }
     },
     computed: {

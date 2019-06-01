@@ -1,9 +1,13 @@
 const express = require('express');
 const path = require('path');
 const child_process = require('child_process');
-var bodyParser = require('body-parser');
+const bodyParser = require('body-parser');
+const fixedColor = require('./fixedColor');
 
+const C_FixedBroadcastIntervalMS = 250;
 const C_Port = 3000;
+
+var fixedBoadcastInterval = null;
 
 var defaultSettings = {};
 var config = {};
@@ -62,6 +66,11 @@ function restart(newConfig, newServerConfig) {
         pythonProcess = undefined;
     }
 
+    if (fixedBoadcastInterval !== null) {
+        clearInterval(fixedBoadcastInterval);
+        fixedBoadcastInterval = null;
+    }
+
     config = Object.assign(config, newConfig);
     serverConfig = Object.assign(serverConfig, newServerConfig);
 
@@ -83,6 +92,20 @@ function restart(newConfig, newServerConfig) {
             '--mid-start', config.mid_start,
             '--treble-start', config.treble_start,
         ]);
+    } else if (serverConfig.mode === 'fixed') {
+        const updateColor = () => {
+            fixedColor.sendFixedColor({
+                r: config.chosen_color.r,
+                g: config.chosen_color.g,
+                b: config.chosen_color.b,
+            });
+        };
+
+        updateColor();
+
+        // In case any clients flake out, continue to occasionally send out the
+        //  fixed color while in this mode.
+        fixedBoadcastInterval = setInterval(updateColor, C_FixedBroadcastIntervalMS);
     }
 }
 
