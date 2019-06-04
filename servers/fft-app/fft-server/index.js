@@ -14,7 +14,7 @@ var config = {};
 var dftInfo = {};
 
 var defaultServerConfig = {
-    mode: 'fft',
+    mode: 'fixed',
 };
 
 var serverConfig = Object.assign({}, defaultServerConfig);
@@ -41,7 +41,7 @@ function getDefaults(done) {
 
     getDefaults.stdout.on('close', () => {
         defaultSettings = JSON.parse(output);
-        config = Object.assign({}, defaultSettings);
+        config = Object.assign( { chosen_color: { r: 127, g: 0, b: 255 } }, defaultSettings);
 
         const getFrequencies = child_process.spawn('python2', [
             pyFFTPath,

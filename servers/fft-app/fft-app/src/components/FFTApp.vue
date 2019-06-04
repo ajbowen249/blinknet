@@ -333,15 +333,30 @@ export default {
             baseHorizontalSlider,
 
             chosenColor: {
-                hsl: { h: 270, s: 0.5000000000000001,l: 0.6000000000000001, a: 1 },
-                hex: '#9966CC',
-                hex8: '#9966CCFF',
-                rgba: { r: 153, g: 102, b: 204, a: 1 },
-                hsv: { h: 270, s: 0.5, v: 0.8, a:1 },
-                oldHue: 270,
-                source: 'hex',
+                hsl: {
+                    h: 269.94749403938533,
+                    s : 1,
+                    l: 0.5,
+                    a :1
+                },
+                hex: "#7F00FF",
+                hex8: "#7F00FFFF",
+                rgba: {
+                    r: 127,
+                    g: 0,
+                    b: 255,
+                    a: 1
+                },
+                hsv: {
+                    h: 269.94749403938533,
+                    s: 1,
+                    v: 1,
+                    a: 1
+                },
+                oldHue: 269.94749403938533,
+                source: "hsva",
                 a: 1
-            },
+            }
         };
     },
     metaInfo: {
@@ -408,3 +423,4 @@ button {
 }
 
 </style>
+
