@@ -135,11 +135,11 @@ def make_packet(matrix):
     return packet
 
 def get_dft_buckets():
-    return np.fft.fftfreq(CHUNK, 1.0/SAMPLE_RATE)[:512].tolist()
+    return np.fft.fftfreq(CHUNK, 1.0/SAMPLE_RATE)[:CHUNK/2].tolist()
 
 def get_params():
     bus_index = 1 #2
-    device = 'plughw:CARD=Microphone,DEV=0'
+    device = 'hw:CARD=Microphone,DEV=0'
     threshold = 5
     maximum = 7
 

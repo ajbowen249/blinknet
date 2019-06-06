@@ -78,6 +78,7 @@
                     </div>
                 </div>
                 <div>
+                    <button v-on:click="toggleMode()">{{ modeToggleLabel }}</button>
                     <button v-on:click="fullscreenFFT()">Fullscreen</button>
                     <button v-on:click="restart()">Restart</button>
                     <button v-on:click="resetToDefaults()">Reset To Defaults</button>
@@ -105,20 +106,27 @@
                     </select>
                 </div>
             </div>
+            <div>
+                <div id="fixed-color-picker">
+                    <chrome-picker :disableAlpha="true" :disableFields="true" v-model="chosenColor" @input="onChosenColorChanged"></chrome-picker>
+                </div>
+            </div>
         </div>
     </div>
 </template>
 
 <script>
 
-import VueSlider from 'vue-slider-component'
-import 'vue-slider-component/theme/default.css'
+import VueSlider from 'vue-slider-component';
+import 'vue-slider-component/theme/default.css';
+
+import { Chrome } from 'vue-color';
 
 import * as api from '../utils/api';
 
 export default {
     methods: {
-        async restart() {
+        async sendData() {
             await api.restart({
                 bus_index: this.selectedBusIndex,
                 device: this.selectedDevice,
@@ -134,8 +142,12 @@ export default {
                 bass_cutoff: this.bassCutoff,
                 mid_start: this.midStart,
                 treble_start: this.trebleStart,
-            });
 
+                chosen_color: this.chosenColor.rgba,
+            }, this.serverConfig);
+        },
+        async restart() {
+            await this.sendData();
             await this.getState();
         },
         async resetToDefaults() {
@@ -164,6 +176,8 @@ export default {
             this.haveInitialState = true;
 
             this.dftInfo = state.dft_info;
+
+            this.serverConfig = state.server_config;
         },
         indexToFrequency(index) {
             var frequency = this.dftInfo.dft_frequencies[index];
@@ -190,6 +204,22 @@ export default {
             } else {
                 cancelFullScreen.call(doc);
             }
+        },
+        toggleMode() {
+            if (!this.serverConfig) {
+                return;
+            }
+
+            if (this.serverConfig.mode === 'fft') {
+                this.serverConfig.mode = 'fixed';
+            } else {
+                this.serverConfig.mode = 'fft';
+            }
+
+            this.restart();
+        },
+        onChosenColorChanged() {
+            this.sendData();
         }
     },
     computed: {
@@ -221,6 +251,40 @@ export default {
             }
 
             return this.indexToFrequency(this.trebleStart);
+        },
+        isFFTMode() {
+            return this.serverConfig && this.serverConfig.mode === 'fft';
+        },
+        thresholdSliderOptions() {
+            return Object.assign({
+                min: 0,
+                max: 10,
+                interval: .1,
+                disabled: !this.isFFTMode,
+            }, this.baseVerticalSlider);
+        },
+        gainSliderOptions() {
+            return Object.assign({
+                min: 0,
+                max: 1.5,
+                interval: .01,
+                disabled: !this.isFFTMode,
+            }, this.baseVerticalSlider)
+        },
+        frequencySliderOptions() {
+            return Object.assign({
+                min: 0,
+                max: 100,
+                interval: 1,
+                disabled: !this.isFFTMode,
+            }, this.baseHorizontalSlider);
+        },
+        modeToggleLabel() {
+            if (!this.serverConfig) {
+                return '';
+            }
+
+            return this.serverConfig.mode === 'fft' ? 'Fixed Mode' : 'FFT Mode';
         }
     },
     mounted: async function() {
@@ -263,23 +327,36 @@ export default {
             midStart: 0,
             trebleStart: 0,
 
-            thresholdSliderOptions: Object.assign({
-                min: 0,
-                max: 10,
-                interval: .1,
-            }, baseVerticalSlider),
+            serverConfig: undefined,
 
-            gainSliderOptions: Object.assign({
-                min: 0,
-                max: 1.5,
-                interval: .01,
-            }, baseVerticalSlider),
+            baseVerticalSlider,
+            baseHorizontalSlider,
 
-            frequencySliderOptions: Object.assign({
-                min: 0,
-                max: 100,
-                interval: 1,
-            }, baseHorizontalSlider),
+            chosenColor: {
+                hsl: {
+                    h: 269.94749403938533,
+                    s : 1,
+                    l: 0.5,
+                    a :1
+                },
+                hex: "#7F00FF",
+                hex8: "#7F00FFFF",
+                rgba: {
+                    r: 127,
+                    g: 0,
+                    b: 255,
+                    a: 1
+                },
+                hsv: {
+                    h: 269.94749403938533,
+                    s: 1,
+                    v: 1,
+                    a: 1
+                },
+                oldHue: 269.94749403938533,
+                source: "hsva",
+                a: 1
+            }
         };
     },
     metaInfo: {
@@ -293,7 +370,8 @@ export default {
         ]
     },
     components: {
-        VueSlider
+        VueSlider,
+        'chrome-picker': Chrome,
     }
 }
 </script>
@@ -339,4 +417,10 @@ button {
     margin: 0 5px;
 }
 
+#fixed-color-picker {
+    margin: 20px auto;
+    width: 225px;
+}
+
 </style>
+
