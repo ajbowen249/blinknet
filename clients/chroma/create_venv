@@ -1,0 +1,8 @@
+#!/bin/sh
+pythonpath=`command -v python3`
+if [ -z "$pythonpath" ]
+then
+    pythonpath=`command -v python`
+fi
+
+virtualenv -p $pythonpath .venv
