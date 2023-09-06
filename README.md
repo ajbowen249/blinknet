@@ -1,6 +1,9 @@
 # BlinkNet
 BlinkNet is a system designed for controlling RGBW LEDs across multiple devices from a single control unit via UDP Multicast.
 
+_This rough footage explains what the project does. Unfortunately, the best example I have is set to the "Cha-Cha Slide." No project is perfect._
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/tLIPRsWJwsU/0.jpg)](https://www.youtube.com/watch?v=tLIPRsWJwsU)
+
 ## Protocol
 Clients and the source form a multicast group, currently with address `224.3.29.71` and port `4210`. There is currently no standard channel of client to server communication. Servers send out packets with the structure:
 
